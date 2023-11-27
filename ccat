@@ -1,0 +1,4 @@
+#!/bin/sh
+
+# Use source-highlight with provided arguments and pass to cat
+source-highlight --out-format=esc -o STDOUT -i "$@" 2>/dev/null || cat "$@"

@@ -1,0 +1,10 @@
+#!/bin/dash
+
+current_option=$(setxkbmap -query | grep "keypad:pointerkeys" | wc -l)
+
+if [ $current_option -eq 0 ]; then
+  setxkbmap -option "keypad:pointerkeys"
+  echo "pointerkeys are now enabled."
+else
+  echo "pointerkeys are already enabled"
+fi

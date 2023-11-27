@@ -1,0 +1,66 @@
+#!/bin/sh
+
+# Function to compile code using the online compiler
+compile_code() {
+    local source_content="$1"
+    local output_file="$2"
+    local execute_cmd="$3"
+
+    # Construct the compiler command
+    local compiler_cmd="g++-4.8 main.cpp"
+
+    # Construct the JSON string for the POST request
+    local json_data=$(jq -n --arg cmd "$compiler_cmd && $execute_cmd" --arg src "$source_content" '{"cmd": $cmd, "src": $src}')
+
+    # Send the code to the online compiler using a POST request
+    local compiler_output
+    compiler_output=$(printf '%s' "$json_data" | curl -s -X POST -H "Content-Type: application/json" -d @- "http://coliru.stacked-crooked.com/compile")
+
+    if [ -n "$output_file" ]; then
+        printf '%s' "$compiler_output" > "$output_file"
+        chmod +x "$output_file"
+    else
+        printf '%s' "$compiler_output"
+        printf '\n'
+    fi
+}
+
+# Check if file paths were provided as arguments
+if [ "$#" -eq 0 ]; then
+    printf 'Usage: %s [-o output_file] <file1> <file2> ...\n' "$0"
+    exit 1
+fi
+
+# Parse command-line options
+output_file=""
+execute_cmd="./a.out"
+
+while [ $# -gt 0 ]; do
+    case $1 in
+        -o)
+            output_file="$2"
+            execute_cmd="cat ./a.out"
+            shift 2
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
+
+# Read the contents of the provided files
+source_content=""
+
+for file in "$@"; do
+    if [ -f "$file" ]; then
+        content=$(cat "$file")
+        source_content="$source_content$content"
+    else
+        printf 'File not found: %s\n' "$file"
+        exit 1
+    fi
+done
+
+# Compile the provided C++ code
+compile_code "$source_content" "$output_file" "$execute_cmd"
+

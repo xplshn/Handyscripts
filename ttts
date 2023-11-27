@@ -1,0 +1,48 @@
+#!/bin/sh
+
+API_URL="https://tiktok-tts.weilnet.workers.dev/api/generation"
+TEXT="$1"
+VOICE="en_us_009"
+
+# Check for correct number of arguments
+if [ $# -ne 1 ]; then
+    printf "Usage: %s \"your text here\"\n" "$0"
+    exit 1
+fi
+
+# Perform the API request to get audio data
+response=$(curl -sS -X POST \
+    -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/119.0' \
+    -H 'Accept: */*' \
+    -H 'Accept-Language: en-US,en;q=0.5' \
+    -H 'Referer: https://www.text-to-speech.app/' \
+    -H 'Content-Type: application/json' \
+    -H 'Origin: https://www.text-to-speech.app' \
+    -H 'DNT: 1' \
+    -H 'Connection: keep-alive' \
+    -H 'TE: trailers' \
+    --data-raw "{\"text\":\"$TEXT\",\"voice\":\"$VOICE\"}" \
+    "$API_URL")
+
+# Extract audio data from the API response
+audio_data=$(printf "%s" "$response" | awk -F'"data":"|",' '{print $2}')
+
+# Check if audio data is available
+if [ -n "$audio_data" ] && [ "$audio_data" != "null" ]; then
+    temp_audio_file="/tmp/audio_$$.mp3"
+    printf "Audio data saved to: %s\n" "$temp_audio_file"
+    
+    # Decode and play audio data using available command
+    if command -v mpg123 >/dev/null 2>&1; then
+        printf "%s" "$audio_data" | base64 -d > "$temp_audio_file"
+        mpg123 "$temp_audio_file"
+    elif command -v play >/dev/null 2>&1; then
+        printf "%s" "$audio_data" | base64 -d | play -t mp3 -
+    else
+        printf "Please install 'mpg123' or 'sox' to play audio.\n"
+    fi
+
+    rm -f "$temp_audio_file"
+else
+    printf "Failed to retrieve audio content from the API.\n"
+fi
