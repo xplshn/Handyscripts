@@ -34,15 +34,18 @@ audio_data=$(printf "%s" "$response" | awk -F'"data":"|",' '{print $2}')
 
 # Check if audio data is available
 if [ -n "$audio_data" ] && [ "$audio_data" != "null" ]; then
-    temp_audio_file="/tmp/audio_$$.mp3"
+    temp_audio_file="$TMPDIR/audio_$$.mp3"
     printf "Audio data saved to: %s\n" "$temp_audio_file"
-    
+
     # Decode and play audio data using available command
     if command -v mpg123 >/dev/null 2>&1; then
         printf "%s" "$audio_data" | base64 -d > "$temp_audio_file"
         mpg123 "$temp_audio_file"
     elif command -v play >/dev/null 2>&1; then
         printf "%s" "$audio_data" | base64 -d | play -t mp3 -
+    elif command -v termux-media-player >/dev/null 2>&1; then
+	printf "%s" "$audio_data" | base64 -d > "$temp_audio_file"
+	termux-media-player play "$temp_audio_file"
     else
         printf "Please install 'mpg123' or 'sox' to play audio.\n"
     fi
