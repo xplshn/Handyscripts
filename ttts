@@ -6,11 +6,12 @@ VOICE="en_us_009"
 
 # Check for correct number of arguments
 if [ $# -ne 1 ] && [ $# -ne 2 ]; then
-    printf "Usage: %s \"your text here\"\n" "$0"
+    printf "Usage: %s \"your text here\" [voice]\n" "$0"
     exit 1
 fi
 
-if [ "$2" -ne 1 ]; then
+# Assign second argument to VOICE if it exists
+if [ $# -eq 2 ]; then
   VOICE="$2"
 fi
 
