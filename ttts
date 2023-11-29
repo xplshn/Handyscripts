@@ -10,6 +10,10 @@ if [ $# -ne 1 ]; then
     exit 1
 fi
 
+if [ "$2" -ne 1 ]; then
+  VOICE="$2"
+fi
+
 # Perform the API request to get audio data
 response=$(curl -sS -X POST \
     -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/119.0' \
