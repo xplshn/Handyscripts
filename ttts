@@ -5,7 +5,7 @@ TEXT="$1"
 VOICE="en_us_009"
 
 # Check for correct number of arguments
-if [ $# -ne 1 ]; then
+if [ $# -ne 1 ] && [ $# -ne 2 ]; then
     printf "Usage: %s \"your text here\"\n" "$0"
     exit 1
 fi
