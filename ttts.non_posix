@@ -1,0 +1,101 @@
+#!/bin/sh
+
+# Function to check and create cache file if it doesn't exist
+initialize_cache() {
+    CACHE_DIR=${TMPDIR:-/tmp}
+    CACHE_FILE="$CACHE_DIR/ttts_cache"
+
+    if [ ! -f "$CACHE_FILE" ]; then
+        touch "$CACHE_FILE"
+        chmod 600 "$CACHE_FILE"
+    fi
+}
+
+# Function to check if audio is cached
+check_cached_audio() {
+    cached_audio=$(grep -E "^$TEXT;$VOICE;" "$CACHE_FILE" | awk -F';' '{print $3}')
+    if [ -n "$cached_audio" ]; then
+        echo "Audio for '$TEXT' with voice '$VOICE' found in cache."
+
+        # Decode and play cached audio data using available command
+        temp_cached_audio="$CACHE_DIR/ttts_cached_audio_$$$$.mp3"
+        echo "$cached_audio" | base64 -d > "$temp_cached_audio"
+        play_cached_audio "$temp_cached_audio"
+        rm -f "$temp_cached_audio"
+        exit 0
+    fi
+}
+
+# Function to play cached audio
+play_cached_audio() {
+    if command -v mpg123 >/dev/null 2>&1; then
+        mpg123 "$1"
+    elif command -v play >/dev/null 2>&1; then
+        play -t mp3 "$1"
+    elif command -v termux-media-player >/dev/null 2>&1; then
+        termux-media-player play "$1"
+    elif command -v audioplay >/dev/null 2>&1; then
+        audioplay "$1"
+    else
+        echo "Please install 'mpg123', 'sox' to play audio."
+    fi
+}
+
+# Function to fetch audio data from API and cache it
+fetch_and_cache_audio() {
+    response=$(curl -sS -X POST \
+        -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/119.0' \
+        -H 'Accept: */*' \
+        -H 'Accept-Language: en-US,en;q=0.5' \
+        -H 'Referer: https://www.text-to-speech.app/' \
+        -H 'Content-Type: application/json' \
+        -H 'Origin: https://www.text-to-speech.app' \
+        -H 'DNT: 1' \
+        -H 'Connection: keep-alive' \
+        -H 'TE: trailers' \
+        --data-raw "{\"text\":\"$TEXT\",\"voice\":\"$VOICE\"}" \
+        "$API_URL")
+
+    audio_data=$(echo "$response" | awk -F'"data":"|",' '{print $2}')
+
+    if [ -n "$audio_data" ] && [ "$audio_data" != "null" ]; then
+        temp_audio_file="$CACHE_DIR/ttts_cached_audio_$$$$.mp3"
+        echo "Audio data saved to: $temp_audio_file"
+
+        echo "$audio_data" | base64 -d > "$temp_audio_file"
+        play_cached_audio "$temp_audio_file"
+
+        echo "$TEXT;$VOICE;$audio_data" >> "$CACHE_FILE"
+
+        # Keep the latest 1000 entries in the cache
+        cache_size=$(wc -l < "$CACHE_FILE")
+        if [ "$cache_size" -gt 1000 ]; then
+            tail -n 1000 "$CACHE_FILE" > "$CACHE_FILE.tmp"
+            mv "$CACHE_FILE.tmp" "$CACHE_FILE"
+        fi
+    else
+        echo "Failed to retrieve audio content from the API."
+    fi
+}
+
+# Main script logic starts here
+
+# Define API URL and voice
+API_URL="https://tiktok-tts.weilnet.workers.dev/api/generation"
+TEXT="$1"
+VOICE="en_us_009"
+
+# Check number of arguments
+if [ $# -lt 1 ] || [ $# -gt 2 ]; then
+    echo "Usage: $0 \"your text here\" [voice]"
+    exit 1
+fi
+
+# Assign second argument to VOICE if it exists
+if [ $# -eq 2 ]; then
+    VOICE="$2"
+fi
+
+initialize_cache
+check_cached_audio
+fetch_and_cache_audio
