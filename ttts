@@ -31,7 +31,7 @@ if [ -n "$cached_audio" ]; then
     echo "Audio for '$TEXT' with voice '$VOICE' found in cache."
 
     # Decode and play the cached audio data using available command
-    temp_cached_audio="$CACHE_DIR/ttts_cached_audio_$$.mp3"
+    temp_cached_audio="$CACHE_DIR/ttts_cached_audio_$$$$.mp3"
     echo "$cached_audio" | base64 -d > "$temp_cached_audio"
     if [ $(which mpg123) ]; then
         mpg123 "$temp_cached_audio"
