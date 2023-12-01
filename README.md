@@ -7,3 +7,5 @@ Handy POSIX(mostly) scripts I made for personal use.
  - OG++4.8 Is a wrapper for using an online compiler's API, currently, it does not support stdin or many libraries apart from those that come with g++. You can edit the og++4.8 script and change its version in the "compiler_cmd" variable. It is very OG.
  - ccat, or ColorCat is simply a wrapper for cat that uses source-highlight to highlight text whenever a deffinition file matches the content of the text. Really handy! I recommend doing an alias, since it behaves exactly like cat.
  - xpointerkeys simply enables X's pointerkeys feature "setxkbmap -option "keypad:pointerkeys".
+ - Prev gives you a preview of a site(a screenshot of it) using viu as its image viewer, when on wezterm or a terminal with sixel support, the image will be displayed as a normal image, it will have all the fine details, else, it will be displayed using Unicode blocks, which is not useful at all.
+ - catservice and dogservice deliver fresh cat/dogs photos to your terminal (See the script and API documentation to change sizes, breeds, etc. Add to your shell's rc for maximum productivity)
