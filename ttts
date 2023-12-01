@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# The script might have been run before, disable the previous alias
+unalias seedocs_ttts 2>/dev/null
+
 # Define API URL and voice
 API_URL="https://tiktok-tts.weilnet.workers.dev/api/generation"
 TEXT="$1"
@@ -42,7 +45,7 @@ if [ -n "$cached_audio" ]; then
     elif [ $(which audioplay) ]; then
         audioplay "$temp_cached_audio"
     else
-        echo "Please install 'mpg123', 'sox', 'termux-media-player' or 'audioplay' to play audio."
+        echo "Please install 'mpg123', 'sox', or modify the script's commands to use a player of your choice to play audio."
     fi
     rm -f "$temp_cached_audio"
     exit 0
@@ -92,5 +95,6 @@ if [ -n "$audio_data" ] && [ "$audio_data" != "null" ]; then
         mv "$CACHE_FILE.tmp" "$CACHE_FILE"
     fi
 else
-    echo "Failed to retrieve audio content from the API."
+    echo "Failed to retrieve audio content from the API. The value of $2 might not be correct, see documentation at https://github.com/xplshn/Handyscripts/blob/main/voices_ttts.md or execute seedocs_ttts in your terminal"
+    alias seedocs_ttts="curl -SsL https://raw.githubusercontent.com/xplshn/Handyscripts/main/voices_ttts.md"
 fi
