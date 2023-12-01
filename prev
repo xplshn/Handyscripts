@@ -1,0 +1,45 @@
+#!/bin/sh
+
+# Check if viu is installed
+if ! command -v viu >/dev/null 2>&1; then
+    echo "viu is not installed. Please install viu to run this script."
+    exit 1
+fi
+
+# API endpoint and secret key
+API_ENDPOINT="http://api.screenshotlayer.com/api/capture"
+ACCESS_KEY="8d9407789b91ef394ff94bd57df456ec" # This key might not work in the future, register for free at screenshotlayer.com
+
+# Function to capture screenshot and display using viu
+capture_screenshot() {
+    local url="$1"
+    # Fetch the screenshot using curl
+    curl -s "${API_ENDPOINT}?access_key=${ACCESS_KEY}&url=${url}&viewport=800x800&width=800" -o /tmp/prev_web_screenshot.jpg
+
+    # Check if curl command was successful
+    if [ $? -eq 0 ]; then
+        # Display the screenshot using viu
+        viu /tmp/prev_web_screenshot.jpg
+
+        # Clean up downloaded screenshot file
+        rm -f /tmp/prev_web_screenshot.jpg
+    else
+        echo "Failed to capture a screenshot from the provided URL."
+    fi
+}
+
+# Check if the script is called with an argument
+if [ $# -eq 0 ]; then
+    # Get URL input from user
+    echo "Enter the URL of the webpage to capture a screenshot:"
+    read URL
+else
+    URL="$1"
+fi
+
+# Check if the URL doesn't start with http or https, then add http to it
+if ! echo "$URL" | grep -q "^http\|^https"; then
+    URL="http://$URL"
+fi
+
+capture_screenshot "$URL"

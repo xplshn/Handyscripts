@@ -1,0 +1,19 @@
+#!/bin/sh
+
+# Download the image using curl with follow redirects
+curl -sS -L "https://api.thedogapi.com/v1/images/search?size=med&mime_types=jpg&format=src&has_breeds=true&order=RANDOM&page=0&limit=1" --output /tmp/cat_image.jpg
+
+# Check if download was successful
+if [ -f "/tmp/cat_image.jpg" ]; then
+    # Display the downloaded image using viu if available
+    if command -v viu >/dev/null 2>&1; then
+        viu -w 15 -h 10 /tmp/cat_image.jpg
+	rm /tmp/cat_image.jpg
+    else
+        echo "viu is not available to display the image."
+        echo "You can view the downloaded image at: /tmp/cat_image.jpg"
+	rm /tmp/cat_image.jpg
+    fi
+else
+    echo "Failed to download the image."
+fi
