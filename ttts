@@ -10,7 +10,7 @@ VOICE="en_us_009"
 
 # Check number of arguments
 if [ $# -lt 1 ] || [ $# -gt 2 ]; then
-    echo "Usage: $0 \"your text here\" [voice]"
+    printf "Usage: %s \"your text here\" [voice]\n" "$0"
     exit 1
 fi
 
@@ -31,7 +31,7 @@ fi
 cached_audio=$(grep -E "^$TEXT;$VOICE;" "$CACHE_FILE" | awk -F';' '{print $3}')
 
 if [ -n "$cached_audio" ]; then
-    echo "Audio for '$TEXT' with voice '$VOICE' found in cache."
+    printf "Audio for '%s' with voice '%s' found in cache.\n" "$TEXT" "$VOICE"
 
     # Decode and play the cached audio data using available command
     temp_cached_audio="$CACHE_DIR/ttts_cached_audio_$$$$.mp3"
@@ -45,7 +45,7 @@ if [ -n "$cached_audio" ]; then
     elif [ $(which audioplay) ]; then
         audioplay "$temp_cached_audio"
     else
-        echo "Please install 'mpg123', 'sox', or modify the script's commands to use a player of your choice to play audio."
+        printf "Please install 'mpg123', 'sox', or modify the script's commands to use a player of your choice to play audio.\n"
     fi
     rm -f "$temp_cached_audio"
     exit 0
@@ -71,7 +71,7 @@ audio_data=$(echo "$response" | awk -F'"data":"|",' '{print $2}')
 # Check if audio data is available
 if [ -n "$audio_data" ] && [ "$audio_data" != "null" ]; then
     temp_audio_file="$CACHE_DIR/ttts_cached-audio_$$$$.mp3"
-    echo "Audio data saved to: $temp_audio_file"
+    printf "Audio data saved to: %s\n" "$temp_audio_file"
 
     # Decode and play audio data using available command
     echo "$audio_data" | base64 -d > "$temp_audio_file"
@@ -82,7 +82,7 @@ if [ -n "$audio_data" ] && [ "$audio_data" != "null" ]; then
     elif [ $(which termux-media-player) ]; then
         termux-media-player play "$temp_audio_file"
     else
-        echo "Please install 'mpg123', 'sox' to play audio."
+        printf "Please install 'mpg123', 'sox' to play audio.\n"
     fi
 
     # Cache the audio information
@@ -95,6 +95,12 @@ if [ -n "$audio_data" ] && [ "$audio_data" != "null" ]; then
         mv "$CACHE_FILE.tmp" "$CACHE_FILE"
     fi
 else
-    echo "Failed to retrieve audio content from the API. The value of $2 might not be correct, see documentation at https://github.com/xplshn/Handyscripts/blob/main/voices_ttts.md or execute seedocs_ttts in your terminal"
-    alias seedocs_ttts="curl -SsL https://raw.githubusercontent.com/xplshn/Handyscripts/main/voices_ttts.md"
+    RED='\033[1;31m'        #| Color Red
+    GREEN='\033[0;32m'    #| Color Green
+    PURPLE='\033[0;35m'   #| Color Purple
+    NC='\033[0m'                #| No Color
+    printf "${RED}Failed to retrieve audio content from the API.${NC}\n"
+    printf "The value of VOICE${RED}($2)${NC} might not be correct\n"
+    printf "See documentation at ${PURPLE}https://github.com/xplshn/Handyscripts/blob/main/voices_ttts.md${NC}\n"
+    printf "You can also execute: ${GREEN}curl -SsL https://raw.githubusercontent.com/xplshn/Handyscripts/main/voices_ttts.md${NC}\n"
 fi
