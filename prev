@@ -1,9 +1,5 @@
 #!/bin/sh
 
-SIZE1="$2"
-SIZE2="$3"
-SIZE3="$4"
-
 # Function to display help page
 display_help() {
     printf "Usage: %s URL [Viewport: Width Height] [Width]\n" "$0"
@@ -12,21 +8,10 @@ display_help() {
 # Function to check if a variable contains a number
 contains_number() {
     case $1 in
-        ''|*[!0-9]*) return 1 ;; # Variable does not contain only digits
-        *) return 0 ;;            # Variable contains only digits
+        *[!0-9]*) return 1 ;; # Variable does not contain only digits
+        *) return 0 ;;        # Variable contains only digits
     esac
 }
-
-# Check if SIZEs contain numbers
-if ! contains_number "$SIZE1"; then
-    SIZE1=800
-fi
-if ! contains_number "$SIZE2"; then
-    SIZE2=800
-fi
-if ! contains_number "$SIZE3"; then
-    SIZE3="$SIZE1"
-fi
 
 # Function to display an image using viu
 display_image() {
@@ -38,13 +23,14 @@ display_image() {
 capture_screenshot() {
     local url="$1"
 
-    # Check if the URL is an image link
-    content_type=$(curl -sI --head "$url" | awk '/^Content-Type: / {print $2}')
-    if echo "$content_type" | grep -qiE "image/"; then
-        # Extract extension from content type
-        extension=$(echo "$content_type" | sed -e 's#image/##' | tr '[:upper:]' '[:lower:]')
+    # Capture a screenshot using the API
+    local api_endpoint="http://api.screenshotlayer.com/api/capture"
+    local access_key="1c3d44a2fe16192e5b576d3ae4cd74f1"  # Replace with your actual access key
 
-        # Download and display the image using viu
+    # Check if the URL ends with supported image extensions or if it's a direct link to an image
+    if printf "%s\n" "$url" | grep -Eq "\.(jpg|jpeg|png|webp)$" || curl -sI "$url" | grep -iqE "Content-Type: image"; then
+        # Direct link to an image file or supported image Content-Type
+        local extension=$(printf "%s\n" "$url" | awk -F . '{print $NF}')
         if curl -s "$url" -o "/tmp/prev_web_screenshot.$extension"; then
             display_image "/tmp/prev_web_screenshot.$extension"
             rm -f "/tmp/prev_web_screenshot.$extension"
@@ -52,29 +38,38 @@ capture_screenshot() {
             printf "Failed to download and display the image.\n"
         fi
     else
-        # Capture a screenshot using the API
-        local api_endpoint="http://api.screenshotlayer.com/api/capture"
-        local access_key="1c3d44a2fe16192e5b576d3ae4cd74f1"  # Replace with your actual access key
-
-        # Check if the URL doesn't start with http or https, then add http to it
-        if ! echo "$url" | grep -q "^http\|^https"; then
-            url="http://$url"
-        fi
-
-        # Fetch the screenshot using curl and display using viu
-        if curl -s "${api_endpoint}?access_key=${access_key}&url=${url}&viewport=${SIZE1}x${SIZE2}&width=${SIZE3}" -o "/tmp/prev_web_screenshot.png"; then
-            display_image "/tmp/prev_web_screenshot.png"
-            rm -f "/tmp/prev_web_screenshot.png"
+        # Fetch the screenshot using curl and identify the image type using file command
+        local file_info=$(curl -sI "$url" | file -)
+        if printf "%s\n" "$file_info" | grep -iq "image"; then
+            local file_extension=$(printf "%s\n" "$file_info" | awk '{print $2}')
+            if curl -s "${api_endpoint}?access_key=${access_key}&url=${url}&viewport=${SIZE1}x${SIZE2}&width=${SIZE3}" -o "/tmp/prev_web_screenshot.$file_extension"; then
+                display_image "/tmp/prev_web_screenshot.$file_extension"
+                rm -f "/tmp/prev_web_screenshot.$file_extension"
+            else
+                printf "Failed to capture a screenshot from the provided URL.\n"
+            fi
         else
-            printf "Failed to capture a screenshot from the provided URL.\n"
+            printf "Unsupported image format.\n"
         fi
     fi
 }
+
 
 # Check if the script is called with an argument
 if [ $# -eq 0 ]; then
     display_help
     exit 1
+fi
+
+SIZE1="${2:-800}"
+SIZE2="${3:-800}"
+SIZE3="${4:-$SIZE1}"
+
+# Check if SIZEs contain numbers
+if ! contains_number "$SIZE1" || ! contains_number "$SIZE2" || ! contains_number "$SIZE3"; then
+    SIZE1=800
+    SIZE2=800
+    SIZE3="$SIZE1"
 fi
 
 input="$1"
