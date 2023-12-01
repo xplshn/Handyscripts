@@ -42,7 +42,7 @@ if [ -n "$cached_audio" ]; then
     elif [ $(which audioplay) ]; then
         audioplay "$temp_cached_audio"
     else
-        printf "Please install 'mpg123', 'sox', or modify the script's commands to use a player of your choice to play audio.\n"
+        printf "Please install 'mpg123' or 'sox', or modify the script's commands to use a player of your choice to play audio.\n"
     fi
     rm -f "$temp_cached_audio"
     exit 0
