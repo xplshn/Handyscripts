@@ -2,7 +2,7 @@
 
 # Check if viu is installed
 if ! command -v viu >/dev/null 2>&1; then
-    echo "viu is not installed. Please install viu to run this script."
+    echo "viu is not installed. Please install viu to run this script.(cargo install viu)"
     exit 1
 fi
 
