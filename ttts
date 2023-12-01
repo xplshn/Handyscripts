@@ -1,8 +1,5 @@
 #!/bin/sh
 
-# The script might have been run before, disable the previous alias
-unalias seedocs_ttts 2>/dev/null
-
 # Define API URL and voice
 API_URL="https://tiktok-tts.weilnet.workers.dev/api/generation"
 TEXT="$1"
