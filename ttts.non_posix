@@ -23,6 +23,8 @@ check_cached_audio() {
         play_cached_audio "$temp_cached_audio"
         rm -f "$temp_cached_audio"
         exit 0
+    else
+	fetch_and_cache_audio
     fi
 }
 
@@ -105,3 +107,5 @@ fi
 
 initialize_cache
 check_cached_audio
+#fetch_and_cache_audio
+

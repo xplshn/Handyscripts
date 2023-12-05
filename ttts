@@ -33,13 +33,13 @@ if [ -n "$cached_audio" ]; then
     # Decode and play the cached audio data using available command
     temp_cached_audio="$CACHE_DIR/ttts_cached_audio_$$$$.mp3"
     echo "$cached_audio" | base64 -d > "$temp_cached_audio"
-    if [ $(which mpg123) ]; then
+    if [ $(which mpg123 2>/dev/null) ]; then
         mpg123 "$temp_cached_audio"
-    elif [ $(which play) ]; then
+    elif [ $(which play 2>/dev/null) ]; then
         play -t mp3 "$temp_cached_audio"
-    elif [ $(which termux-media-player) ]; then
+    elif [ $(which termux-media-player 2>/dev/null) ]; then
         termux-media-player play "$temp_cached_audio"
-    elif [ $(which audioplay) ]; then
+    elif [ $(which audioplay 2>/dev/null) ]; then
         audioplay "$temp_cached_audio"
     else
         printf "Please install 'mpg123' or 'sox', or modify the script's commands to use a player of your choice to play audio.\n"
@@ -72,14 +72,14 @@ if [ -n "$audio_data" ] && [ "$audio_data" != "null" ]; then
 
     # Decode and play audio data using available command
     echo "$audio_data" | base64 -d > "$temp_audio_file"
-    if [ $(which mpg123) ]; then
+    if [ $(which mpg123 2>/dev/null) ]; then
         mpg123 "$temp_audio_file"
-    elif [ $(which play) ]; then
+    elif [ $(which play 2>/dev/null) ]; then
         play -t mp3 "$temp_audio_file"
-    elif [ $(which termux-media-player) ]; then
+    elif [ $(which termux-media-player 2>/dev/null) ]; then
         termux-media-player play "$temp_audio_file"
     else
-        printf "Please install 'mpg123', 'sox' to play audio.\n"
+        printf "Please install 'mpg123' or 'sox' to play audio.\n"
     fi
 
     # Cache the audio information
