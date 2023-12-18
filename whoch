@@ -1,0 +1,51 @@
+#!/bin/ksh
+
+# Function to display usage
+show_usage() {
+    echo "Usage: $(basename "$0") <command>" >&2
+}
+
+# Function to validate the command
+validate_command() {
+    case $1 in
+        *[![:alnum:]_-]* | "") return 1 ;; # Rejects non-alphanumeric, underscores, and hyphens
+        *) return 0 ;; # Allows only alphanumeric, underscores, and hyphens
+    esac
+}
+
+# Function to search for the command in PATH
+search_command_in_path() {
+    local command_to_find="$1"
+    local found=false
+
+    IFS=:
+    for dir in $PATH; do
+        if [ -x "$dir/$command_to_find" ]; then
+            echo "$dir/$command_to_find"
+            found=true
+        fi
+    done
+
+    if [ "$found" = false ]; then
+        echo "Command '$command_to_find' not found in PATH" >&2
+        exit 1
+    fi
+}
+
+# Main function
+main() {
+    if [ $# -ne 1 ] || [ -z "$1" ]; then
+        show_usage
+        exit 1
+    fi
+
+    if ! validate_command "$1"; then
+        echo "Invalid command format. Please provide an alphanumeric command name only." >&2
+        exit 1
+    fi
+
+    search_command_in_path "$1"
+}
+
+# Execute main function with arguments
+main "$@"
