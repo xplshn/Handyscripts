@@ -1,0 +1,49 @@
+#!/bin/ksh
+
+if [ "$#" -eq 1 ] && [ "$1" = "--help" ]; then
+    printf 'Usage: %s <file> [-R]\n' "$0" >&2
+    printf 'baker <file> will create a .bak file in the directory of <file>.\n' >&2
+    printf 'baker -R <file> will move <file>.bak to <file>, efectively restoring .bak to its original place.\n' >&2
+    printf 'Options:\n' >&2
+    printf '  -R    Recover the file from its .bak backup\n' >&2
+    printf 'VERSION: 0.1  \n'
+    exit 1
+fi
+
+if [ "$#" -ne 1 ] && [ "$#" -ne 2 ]; then
+    printf 'Usage: %s <file> [-R]\n' "$0" >&2
+    exit 1
+fi
+
+file="$1"
+bak_file="${file}.bak"
+
+backup_file() {
+    if [ -f "$file" ]; then
+        if [ -f "$bak_file" ]; then
+            printf 'baker: Backup file %s already exists\n' "$bak_file" >&2
+        else
+            cp "$file" "$bak_file" &&
+                printf 'baker: Backed up %s to %s\n' "$file" "$bak_file"
+        fi
+    else
+        printf 'baker: %s does not exist or is not a regular file\n' "$file" >&2
+    fi
+}
+
+recover_file() {
+    if [ -f "$bak_file" ]; then
+        mv "$bak_file" "$file" &&
+            printf 'baker: Recovered %s from %s\n' "$file" "$bak_file"
+    else
+        printf 'baker: %s does not exist or is not a regular file\n' "$bak_file" >&2
+    fi
+}
+
+if [ "$#" -eq 2 ] && [ "$1" = "-R" ]; then
+    file="$2"
+    bak_file="${file}.bak"
+    recover_file
+else
+    backup_file
+fi
