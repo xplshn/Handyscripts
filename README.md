@@ -9,5 +9,9 @@ Handy POSIX(mostly) scripts I made for personal use.
  - catservice and dogservice deliver fresh cat/dogs photos to your terminal (See the script and API documentation to change sizes, breeds, etc. Add to your shell's rc for maximum productivity)
  - xpointerkeys simply enables X's pointerkeys feature "setxkbmap -option "keypad:pointerkeys".
 - Baker, it receives a file as an argument and copies it to <file>.bak, when invoked with -R it moves <file>.bak to <file>. When using -R do not suppply files ending in .bak, the script automatically detects them, if you want, you can do .bak.bak by using "baker <file>.bak", though I do not recommend you do that, it quickly becomes confusing. Keep in mind that -R does not switch places with <file> and <file>.bak, it moves <file>.bak to <file>.
+- woch is REALLY HANDY when working with a big PATH variable, or with "replacing" commands, woch receives a command as an argument and acts the same way as which, however, woch prints out an ordered list of where that command is in your PATH. If you have /usr/local/bin/cargo and /usr/bin/cargo, if woch were invoked with "cargo" as argument it'd print out this:
+/usr/local/bin/cargo
+/usr/bin/cargo
+It is indeed really handy.
 
 ![image](https://github.com/xplshn/Handyscripts/assets/114888778/442b2ff0-ec1a-49eb-abf4-9eef15ecfcd0)
