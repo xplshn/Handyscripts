@@ -1,4 +1,4 @@
-#!/bin/ksh
+#!/bin/sh
 
 # Function to display usage
 show_usage() {
