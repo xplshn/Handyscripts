@@ -1,0 +1,7 @@
+#!/bin/sh
+
+if [ "$(pwd)" = "$HOME" ]; then
+    printf "~"
+else
+    pwd
+fi
