@@ -1,0 +1,11 @@
+#!/bin/sh
+# /bin/ksh
+
+# Check if a command is provided
+if [ -z "$1" ]; then
+    echo "Usage: $0 <command>"
+    exit 1
+fi
+
+# Execute the provided command and redirect its output to /dev/null
+"$@" >/dev/null 2>&1
