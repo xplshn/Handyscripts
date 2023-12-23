@@ -1,113 +1,149 @@
-#!/bin/sh
-# #!/bin/ksh
+#!/bin/ksh
 
 # ANSI color codes
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
+# Directories and files
+INSTALL_DIR="$HOME/.local/share/bin"
+TEMP_DIR="/tmp"
+CACHE_FILE="/tmp/bdl_install-less_bins_cached"
+
 # Function to display colored output
 print_color() {
-    local color=$1
-    local message=$2
-    printf "%b%s%b\n" "$color" "$message" "$NC"
+    printf "%b%s%b\\n" "$1" "$2" "$NC"
 }
 
-# Function that returns a function to install a package using eget
+# Function to fetch binaries
+fetch_binary() {
+    package_name="$1"
+    install_dir="$2"
+    custom_destination="$3"
+    destination="$install_dir/${3:-$package_name}" # Default destination
+    
+    source_url=$(find_url "$package_name")
+
+    if [ -z "$source_url" ]; then
+        print_color "$YELLOW" "Source URL not found for '$package_name'."
+        return 1
+    fi
+
+    if wget -O "$destination" "$source_url" && chmod +x "$destination"; then
+        print_color "$GREEN" "Fetched binary successfully."
+        return 0
+    else
+        print_color "$YELLOW" "Failed to fetch binary."
+        return 1
+    fi
+}
+
+# Function to fetch a package and run or cache it
+fetch_and_run() {
+    package_name="$1"
+    install_dir="/tmp" # Change this to your preferred installation directory
+    cache_file="/tmp/bdl_install-less_bins_cached"
+    tmp_destination="bdl_$package_name-$(date +'%s')"
+
+    if [ -f "$cache_file" ] && grep -q "$package_name" "$cache_file"; then
+        cached_location=$(awk -v pname="$package_name" '$1 == pname { print $2 }' "$cache_file")
+        if [ -n "$cached_location" ] && [ -x "$cached_location" ]; then
+            print_color "$GREEN" "Running '$package_name' from cache..."
+            "$cached_location"
+            return 0
+        fi
+    fi
+
+    fetch_binary "$package_name" "$install_dir" "$tmp_destination" &&
+    echo "$package_name $tmp_destination" >> "$cache_file" &&
+    clean_cache &&
+    "$install_dir/$tmp_destination"
+}
+
+# Function to clean the cache (limit 40 programs)
+clean_cache() {
+    cache_file="/tmp/bdl_install-less_bins_cached"
+
+    if [ -f "$cache_file" ]; then
+        lines=$(wc -l < "$cache_file")
+        if [ "$lines" -gt 40 ]; then
+            sed -i '1,40d' "$cache_file"
+        fi
+    fi
+}
+
+# Function to install a package using eget
 install_package() {
-    local package_name=$1
-
-    install() {
-        local source_url=$1
-        local destination="$HOME/.local/share/bin/$package_name"
-
-        if [ -z "$source_url" ]; then
-            print_color "$YELLOW" "Source URL not found for '$package_name'."
-            return 1
-        fi
-
-        if eget "$source_url" --to "$destination"; then
-            chmod +x "$destination"
-            print_color "$GREEN" "Package '$package_name' installed."
-        else
-            print_color "$YELLOW" "Failed to install '$package_name'."
-        fi
-    }
-
-    echo "$install"
+    package_name="$1"
+    if [ ! -f "$INSTALL_DIR/$package_name" ]; then
+        fetch_binary "$package_name" "$INSTALL_DIR" && print_color "$GREEN" "OK: $INSTALL_DIR/$package_name"
+    else
+        print_color "$YELLOW" "The requested binary is already at: $INSTALL_DIR/$package_name. Will not perform an install."
+    fi
 }
 
-# Function that returns a function to retrieve package source URL
+# Function to retrieve package source URL
 find_url() {
-    local package_name=$1
-    local metadata_url="https://raw.githubusercontent.com/metis-os/hysp-pkgs/main/data/metadata.json"
-    local system_arch=$(uname -m)
+    package_name="$1"
+    metadata_url="https://raw.githubusercontent.com/metis-os/hysp-pkgs/main/data/metadata.json"
+    system_arch="$(uname -m)"
 
-    retrieve_url() {
-        local package_info=$(curl -s "$metadata_url" | jq -r --arg pname "$package_name" --arg sysarch "$system_arch" \
-            '.packages[] | select(.name == $pname and .architecture == $sysarch) | .source')
-        echo "$package_info"
-    }
-
-    echo "$retrieve_url"
+    curl -s "$metadata_url" | jq -r --arg pname "$package_name" --arg sysarch "$system_arch" \
+        '.packages[] | select(.name == $pname and .architecture == $sysarch) | .source'
 }
 
-# Function that returns a function to show detailed package information with color
+# Function to show detailed package information with color
 show_package_info() {
-    local package_name=$1
-    local metadata_url="https://raw.githubusercontent.com/metis-os/hysp-pkgs/main/data/metadata.json"
-    local system_arch=$(uname -m)
+    package_name="$1"
+    metadata_url="https://raw.githubusercontent.com/metis-os/hysp-pkgs/main/data/metadata.json"
+    system_arch="$(uname -m)"
 
-    display_info() {
-        local package_info=$(curl -s "$metadata_url" | jq --arg pname "$package_name" --arg sysarch "$system_arch" \
-            '.packages[] | select(.name == $pname and .architecture == $sysarch) | {description, name, version, updated, size, sha, source}')
+    package_info=$(curl -s "$metadata_url" | jq --arg pname "$package_name" --arg sysarch "$system_arch" \
+        '.packages[] | select(.name == $pname and .architecture == $sysarch) | {description, name, version, updated, size, sha, source}')
 
-        if [ -z "$package_info" ]; then
-            print_color "$YELLOW" "Package '$package_name' not found."
-        else
-            print_color "$GREEN" "$package_info"
-        fi
-    }
-
-    echo "$display_info"
+    if [ -z "$package_info" ]; then
+        print_color "$YELLOW" "Package '$package_name' not found."
+    else
+        print_color "$GREEN" "$package_info"
+    fi
 }
 
-# Function that returns a function to remove an installed package
+# Function to remove an installed package
 remove_package() {
-    local package_name=$1
+    package_name="$1"
+    package_location="$INSTALL_DIR/$package_name"
 
-    uninstall() {
-        local package_location="$HOME/.local/share/bin/$package_name"
+    if [ -f "$package_location" ]; then
+        rm "$package_location" && print_color "$GREEN" "Package '$package_name' removed."
+    else
+        print_color "$YELLOW" "Package '$package_name' is not installed."
+    fi
+}
 
-        if [ -f "$package_location" ]; then
-            rm "$package_location"
-            print_color "$GREEN" "Package '$package_name' removed."
-        else
-            print_color "$YELLOW" "Package '$package_name' is not installed."
-        fi
-    }
-
-    echo "$uninstall"
+# Function to list all possible packages
+list_packages() {
+    curl -qfsSL "https://api.github.com/repos/Azathothas/Toolpacks/contents/x86_64/" | jq -r '.[].name' | sort -u
 }
 
 # Main script
 case $1 in
+    run)
+        fetch_and_run "$2"
+        ;;
     install)
-        package_name=$2
-        install_func=$(install_package "$package_name")
-        source_url=$(find_url "$package_name")
-        $install_func "$source_url"
+        install_package "$2"
         ;;
     search)
         show_package_info "$2"
         ;;
     remove)
-        package_name=$2
-        remove_func=$(remove_package "$package_name")
-        $remove_func
+        remove_package "$2"
+        ;;
+    list)
+        list_packages
         ;;
     *)
-        printf "Usage: %s {install|search|remove} <package_name>\n" "$0"
+        printf "Usage: %s {run|install|search|remove|list} <package_name> [source_url]\\n" "$0"
         exit 1
         ;;
 esac
