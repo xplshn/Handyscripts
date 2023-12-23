@@ -1,4 +1,4 @@
-#!/bin/ksh
+#!/bin/sh
 
 if [ "$#" -eq 1 ] && [ "$1" = "--help" ]; then
     printf 'Usage: %s <file> [-R]\n' "$0" >&2
