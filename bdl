@@ -13,11 +13,11 @@ CACHE_FILE="/tmp/bdl_install-less_bins_cached"
 # Function to display a pretty spinner(bloat, but BSD styled bloat)
 spinner() {
     delay=0.1
-    spin='-\|/'
-    spin_len=$(printf "%s" "$spin" | wc -c)
+    : "${COOLSPIN:=|/-\\}" || COOLSPIN='|/-\'
+    spin_len=$(printf "%s" "$COOLSPIN" | wc -c)
     while true; do
         for i in $(seq 1 "$spin_len"); do
-            printf "%s" "$(printf "%s" "$spin" | cut -c "$i")"
+            printf "%s" "$(printf "%s" "$COOLSPIN" | cut -c "$i")"
             sleep "$delay"
             printf "\b"
         done
