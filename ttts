@@ -9,7 +9,7 @@ unnappear() {
 spinner() {
     [ -z "$COOLSPINNER" ] && COOLSPINNER='|~/\'
     [ -z "$COOLSPINNER_COLOR" ] && COOLSPINNERCOLOR='\033[0m'
-    [ -z "$COOLSPINNER_DELAY"] && COOLSPINNER_DELAY=0.1
+    [ -z "$COOLSPINNER_DELAY" ] && COOLSPINNER_DELAY=0.1
     len=${#COOLSPINNER}
     trap 'printf "\033[?25h"; exit' INT
     while true; do
