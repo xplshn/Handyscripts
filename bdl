@@ -29,6 +29,8 @@ fetch_binary() {
         return 1
     fi
 
+    mkdir -p "$install_dir"  # Ensure the directory exists
+
     if wget -O "$destination" "$source_url" && chmod +x "$destination"; then
         print_color "$GREEN" "Fetched binary successfully."
         return 0
@@ -83,6 +85,7 @@ install_package() {
 }
 
 # Function to retrieve package source URL
+# Function to retrieve package source URL
 find_url() {
     PACKAGE_NAME="$1"
     METADATA_URL="https://raw.githubusercontent.com/metis-os/hysp-pkgs/main/data/metadata.json"
@@ -102,7 +105,7 @@ find_url() {
         fi
     fi
 
-    printf "$SOURCE_URL"
+    printf '%s\n' "$SOURCE_URL"
 }
 
 # Function to show detailed package information with color
