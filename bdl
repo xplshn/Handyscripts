@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/ksh
 
 # ANSI color codes
 GREEN='\033[0;32m'
@@ -84,12 +84,25 @@ install_package() {
 
 # Function to retrieve package source URL
 find_url() {
-    package_name="$1"
-    metadata_url="https://raw.githubusercontent.com/metis-os/hysp-pkgs/main/data/metadata.json"
-    system_arch="$(uname -m)"
+    PACKAGE_NAME="$1"
+    METADATA_URL="https://raw.githubusercontent.com/metis-os/hysp-pkgs/main/data/metadata.json"
+    SYSTEM_ARCH="$(uname -m)"
 
-    curl -s "$metadata_url" | jq -r --arg pname "$package_name" --arg sysarch "$system_arch" \
-        '.packages[] | select(.name == $pname and .architecture == $sysarch) | .source'
+    SOURCE_URL=$(curl -s "$METADATA_URL" | jq -r --arg pname "$PACKAGE_NAME" --arg sysarch "$SYSTEM_ARCH" \
+        '.packages[] | select(.name == $pname and .architecture == $sysarch) | .source')
+
+    # Check if source URL is empty
+    if [ -z "$SOURCE_URL" ]; then
+        LIST_PACKAGES_RESULT=$(list_packages | grep "^$PACKAGE_NAME$")
+        if [ -n "$LIST_PACKAGES_RESULT" ]; then
+            RESPONSE_CODE=$(curl -s -o /dev/null -w "%{http_code}" "https://raw.githubusercontent.com/Azathothas/Toolpacks/main/$PACKAGE_NAME")
+            if [ "$RESPONSE_CODE" != "404" ]; then
+                SOURCE_URL="https://raw.githubusercontent.com/Azathothas/Toolpacks/main/$PACKAGE_NAME"
+            fi
+        fi
+    fi
+
+    printf "$SOURCE_URL"
 }
 
 # Function to show detailed package information with color
