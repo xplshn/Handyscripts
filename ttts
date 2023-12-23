@@ -1,14 +1,25 @@
 #!/bin/sh
 
+# Make the output of a command dissappear
+unnappear() {
+    "$@" >/dev/null 2>&1
+}
+
+# Display a spinner loader with the colors declared(or not!) in the COOLSPINNERCOLOR variable
 spinner() {
-    delay=0.1
-    : "${COOLSPIN:=|/-\\}" || COOLSPIN='|/-\'
-    spin_len=$(printf "%s" "$COOLSPIN" | wc -c)
+    [ -z "$COOLSPINNER" ] && COOLSPINNER='|~/\'
+    [ -z "$COOLSPINNER_COLOR" ] && COOLSPINNERCOLOR='\033[0m'
+    [ -z "$COOLSPINNER_DELAY"] && COOLSPINNER_DELAY=0.1
+    len=${#COOLSPINNER}
+    trap 'printf "\033[?25h"; exit' INT
     while true; do
-        for i in $(seq 1 "$spin_len"); do
-            printf "%s" "$(printf "%s" "$COOLSPIN" | cut -c "$i")"
-            sleep "$delay"
+        i=0
+        while [ "$i" -lt "$len" ]; do
+            char=$(printf "%s" "$COOLSPINNER" | cut -c "$((i + 1))")
+            [ -n "$COOLSPINNERCOLOR" ] && printf "%b%s%b" "$COOLSPINNERCOLOR" "$char" "\033[0m" || printf "%s" "$char"
+            sleep "$COOLSPINNER_DELAY"
             printf "\b"
+            i=$((i + 1))
         done
     done
 }
@@ -47,13 +58,13 @@ play_cached_audio() {
     spinner & spinner_pid=$! 
 
     if command -v mpg123 >/dev/null 2>&1; then
-        mpg123 "$1"
+        unnappear mpg123 "$1"
     elif command -v play >/dev/null 2>&1; then
-        play -t mp3 "$1"
+        unnappear play -t mp3 "$1"
     elif command -v termux-media-player >/dev/null 2>&1; then
-        termux-media-player play "$1"
+        unnappear termux-media-player play "$1"
     elif command -v audioplay >/dev/null 2>&1; then
-        audioplay "$1"
+        unnappear audioplay "$1"
     else
         printf "Please install 'mpg123' or 'sox' to play audio.\n"
     fi
