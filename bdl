@@ -14,9 +14,10 @@ CACHE_FILE="/tmp/bdl_install-less_bins_cached"
 spinner() {
     delay=0.1
     spin='-\|/'
+    spin_len=$(printf "%s" "$spin" | wc -c)
     while true; do
-        for ((i = 0; i < ${#spin}; i++)); do
-            printf "%s" "${spin:i:1}"
+        for i in $(seq 1 "$spin_len"); do
+            printf "%s" "$(printf "%s" "$spin" | cut -c "$i")"
             sleep "$delay"
             printf "\b"
         done
