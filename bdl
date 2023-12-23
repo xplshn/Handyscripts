@@ -1,4 +1,4 @@
-#!/bin/ksh
+#!/bin/sh
 
 # ANSI color codes
 GREEN='\033[0;32m'
@@ -10,18 +10,30 @@ INSTALL_DIR="$HOME/.local/share/bin"
 TEMP_DIR="/tmp"
 CACHE_FILE="/tmp/bdl_install-less_bins_cached"
 
+# Function to display a pretty spinner(bloat, but BSD styled bloat)
+spinner() {
+    delay=0.1
+    spin='-\|/'
+    while true; do
+        for ((i = 0; i < ${#spin}; i++)); do
+            printf "%s" "${spin:i:1}"
+            sleep "$delay"
+            printf "\b"
+        done
+    done
+}
+
 # Function to display colored output
 print_color() {
     printf "%b%s%b\\n" "$1" "$2" "$NC"
 }
 
-# Function to fetch binaries
 fetch_binary() {
     package_name="$1"
     install_dir="$2"
     custom_destination="$3"
     destination="$install_dir/${3:-$package_name}" # Default destination
-    
+
     source_url=$(find_url "$package_name")
 
     if [ -z "$source_url" ]; then
@@ -31,10 +43,21 @@ fetch_binary() {
 
     mkdir -p "$install_dir"  # Ensure the directory exists
 
+    # Start spinner in the background
+    spinner & spinner_pid=$!
+
     if wget -O "$destination" "$source_url" && chmod +x "$destination"; then
+        # Kill the spinner after download completes
+        kill "$spinner_pid" >/dev/null 2>&1
+        # Move the cursor to the beginning of the line and clear the line
+        printf "\033[2K\r"
         print_color "$GREEN" "Fetched binary successfully."
         return 0
     else
+        # Kill the spinner if download fails
+        kill "$spinner_pid" >/dev/null 2>&1
+        # Move the cursor to the beginning of the line and clear the line
+        printf "\033[2K\r"
         print_color "$YELLOW" "Failed to fetch binary."
         return 1
     fi
@@ -47,19 +70,24 @@ fetch_and_run() {
     cache_file="/tmp/bdl_install-less_bins_cached"
     tmp_destination="bdl_$package_name-$(date +'%s')"
 
-    if [ -f "$cache_file" ] && grep -q "$package_name" "$cache_file"; then
+    if [ -f "$cache_file" ] && grep -q "^$package_name " "$cache_file"; then
         cached_location=$(awk -v pname="$package_name" '$1 == pname { print $2 }' "$cache_file")
-        if [ -n "$cached_location" ] && [ -x "$cached_location" ]; then
+        if [ -n "$cached_location" ] && [ -x "$install_dir/$cached_location" ]; then
             print_color "$GREEN" "Running '$package_name' from cache..."
-            "$cached_location"
+            "$install_dir/$cached_location"
             return 0
         fi
     fi
 
-    fetch_binary "$package_name" "$install_dir" "$tmp_destination" &&
-    echo "$package_name $tmp_destination" >> "$cache_file" &&
-    clean_cache &&
-    "$install_dir/$tmp_destination"
+    if fetch_binary "$package_name" "$install_dir" "$tmp_destination"; then
+        echo "$package_name $tmp_destination" >> "$cache_file"
+        clean_cache
+        "$install_dir/$tmp_destination"
+        return 0
+    else
+        print_color "$YELLOW" "Failed to fetch binary '$package_name'."
+        return 1
+    fi
 }
 
 # Function to clean the cache (limit 40 programs)
@@ -84,7 +112,6 @@ install_package() {
     fi
 }
 
-# Function to retrieve package source URL
 # Function to retrieve package source URL
 find_url() {
     PACKAGE_NAME="$1"
@@ -138,7 +165,10 @@ remove_package() {
 
 # Function to list all possible packages
 list_packages() {
-    curl -qfsSL "https://api.github.com/repos/Azathothas/Toolpacks/contents/x86_64/" | jq -r '.[].name' | sort -u
+    spinner & spinner_pid=$!
+    packages=$(curl -qfsSL "https://api.github.com/repos/Azathothas/Toolpacks/contents/x86_64/" | jq -r '.[].name' | sort -u)
+    kill "$spinner_pid" >/dev/null 2>&1
+    printf "\033[2K\r%s\n" "$packages"
 }
 
 # Main script
