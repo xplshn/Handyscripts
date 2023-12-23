@@ -1,5 +1,117 @@
 #!/bin/sh
 
+spinner() {
+    delay=0.1
+    : "${COOLSPIN:=|/-\\}" || COOLSPIN='|/-\'
+    spin_len=$(printf "%s" "$COOLSPIN" | wc -c)
+    while true; do
+        for i in $(seq 1 "$spin_len"); do
+            printf "%s" "$(printf "%s" "$COOLSPIN" | cut -c "$i")"
+            sleep "$delay"
+            printf "\b"
+        done
+    done
+}
+
+# Function to check and create cache file if it doesn't exist
+initialize_cache() {
+    CACHE_DIR=${TMPDIR:-/tmp}
+    CACHE_FILE="$CACHE_DIR/ttts_cache"
+
+    if [ ! -f "$CACHE_FILE" ]; then
+        touch "$CACHE_FILE"
+        chmod 600 "$CACHE_FILE"
+    fi
+}
+
+# Function to check if audio is cached
+check_cached_audio() {
+    cached_audio=$(grep -E "^$TEXT;$VOICE;" "$CACHE_FILE" | awk -F';' '{print $3}')
+    if [ -n "$cached_audio" ]; then
+        printf "Audio for '%s' with voice '%s' found in cache.\n" "$TEXT" "$VOICE"
+
+        # Decode and play cached audio data using available command
+        temp_cached_audio="$CACHE_DIR/ttts_cached_audio_$$$$.mp3"
+        echo "$cached_audio" | base64 -d > "$temp_cached_audio"
+        play_cached_audio "$temp_cached_audio"
+        rm -f "$temp_cached_audio"
+        exit 0
+    else
+	fetch_and_cache_audio
+    fi
+}
+
+# Function to play cached audio
+play_cached_audio() {
+    # Show spinner while playing audio.
+    spinner & spinner_pid=$! 
+
+    if command -v mpg123 >/dev/null 2>&1; then
+        mpg123 "$1"
+    elif command -v play >/dev/null 2>&1; then
+        play -t mp3 "$1"
+    elif command -v termux-media-player >/dev/null 2>&1; then
+        termux-media-player play "$1"
+    elif command -v audioplay >/dev/null 2>&1; then
+        audioplay "$1"
+    else
+        printf "Please install 'mpg123' or 'sox' to play audio.\n"
+    fi
+
+    # Stop spinner once audio playback is finished.
+    kill $spinner_pid > /dev/null 2>&1
+    printf "\b   \b\b\b"  # Clear spinner output
+}
+
+# Function to fetch audio data from API and cache it
+fetch_and_cache_audio() {
+    spinner $$ &
+    response=$(curl -sSL -X POST \
+        -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/119.0' \
+        -H 'Accept: */*' \
+        -H 'Accept-Language: en-US,en;q=0.5' \
+        -H 'Referer: https://www.text-to-speech.app/' \
+        -H 'Content-Type: application/json' \
+        -H 'Origin: https://www.text-to-speech.app' \
+        -H 'DNT: 1' \
+        -H 'Connection: keep-alive' \
+        -H 'TE: trailers' \
+        --data-raw "{\"text\":\"$TEXT\",\"voice\":\"$VOICE\"}" \
+        "$API_URL")
+
+    audio_data=$(echo "$response" | awk -F'"data":"|",' '{print $2}')
+    kill $! > /dev/null 2>&1  # Kill the spinner.
+     printf "\b\b\b   \b\b\b" # Clear spinner output.
+
+    if [ -n "$audio_data" ] && [ "$audio_data" != "null" ]; then
+        temp_audio_file="$CACHE_DIR/ttts_cached_audio_$$$$.mp3"
+        printf "Audio data saved to: %s\n" "$temp_audio_file"
+
+        echo "$audio_data" | base64 -d > "$temp_audio_file"
+        play_cached_audio "$temp_audio_file"
+
+        echo "$TEXT;$VOICE;$audio_data" >> "$CACHE_FILE"
+
+        # Keep the latest 1000 entries in the cache
+        cache_size=$(wc -l < "$CACHE_FILE")
+        if [ "$cache_size" -gt 1000 ]; then
+            tail -n 1000 "$CACHE_FILE" > "$CACHE_FILE.tmp"
+            mv "$CACHE_FILE.tmp" "$CACHE_FILE"
+        fi
+    else
+        RED='\033[1;31m'        #| Color Red
+        GREEN='\033[0;32m'    #| Color Green
+        PURPLE='\033[0;35m'   #| Color Purple
+        NC='\033[0m'                #| No Color
+        printf "${RED}Failed to retrieve audio content from the API.${NC}\n"
+        printf "The value of VOICE${RED}($2)${NC} might not be correct\n"
+        printf "See documentation at ${PURPLE}https://github.com/xplshn/Handyscripts/blob/main/voices_ttts.md${NC}\n"
+        printf "You can also execute: ${GREEN}curl -SsL https://raw.githubusercontent.com/xplshn/Handyscripts/main/voices_ttts.md${NC}\n"
+    fi
+}
+
+# Main script logic starts here
+
 # Define API URL and voice
 API_URL="https://tiktok-tts.weilnet.workers.dev/api/generation"
 TEXT="$1"
@@ -13,91 +125,10 @@ fi
 
 # Assign second argument to VOICE if it exists
 if [ $# -eq 2 ]; then
-  VOICE="$2"
+    VOICE="$2"
 fi
 
-# Check if the cache file exists and create it if not
-CACHE_DIR=${TMPDIR:-/tmp}
-CACHE_FILE="$CACHE_DIR/ttts_cache"
-if [ ! -f "$CACHE_FILE" ]; then
-    touch "$CACHE_FILE"
-    chmod 600 "$CACHE_FILE"
-fi
+initialize_cache
+check_cached_audio
+#fetch_and_cache_audio
 
-# Check if the audio is already cached
-cached_audio=$(grep -E "^$TEXT;$VOICE;" "$CACHE_FILE" | awk -F';' '{print $3}')
-
-if [ -n "$cached_audio" ]; then
-    printf "Audio for '%s' with voice '%s' found in cache.\n" "$TEXT" "$VOICE"
-
-    # Decode and play the cached audio data using available command
-    temp_cached_audio="$CACHE_DIR/ttts_cached_audio_$$$$.mp3"
-    echo "$cached_audio" | base64 -d > "$temp_cached_audio"
-    if [ $(which mpg123 2>/dev/null) ]; then
-        mpg123 "$temp_cached_audio"
-    elif [ $(which play 2>/dev/null) ]; then
-        play -t mp3 "$temp_cached_audio"
-    elif [ $(which termux-media-player 2>/dev/null) ]; then
-        termux-media-player play "$temp_cached_audio"
-    elif [ $(which audioplay 2>/dev/null) ]; then
-        audioplay "$temp_cached_audio"
-    else
-        printf "Please install 'mpg123' or 'sox', or modify the script's commands to use a player of your choice to play audio.\n"
-    fi
-    rm -f "$temp_cached_audio"
-    exit 0
-fi
-
-# Perform the API request to get audio data
-response=$(curl -sS -X POST \
-    -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/119.0' \
-    -H 'Accept: */*' \
-    -H 'Accept-Language: en-US,en;q=0.5' \
-    -H 'Referer: https://www.text-to-speech.app/' \
-    -H 'Content-Type: application/json' \
-    -H 'Origin: https://www.text-to-speech.app' \
-    -H 'DNT: 1' \
-    -H 'Connection: keep-alive' \
-    -H 'TE: trailers' \
-    --data-raw "{\"text\":\"$TEXT\",\"voice\":\"$VOICE\"}" \
-    "$API_URL")
-
-# Extract audio data from the API response
-audio_data=$(echo "$response" | awk -F'"data":"|",' '{print $2}')
-
-# Check if audio data is available
-if [ -n "$audio_data" ] && [ "$audio_data" != "null" ]; then
-    temp_audio_file="$CACHE_DIR/ttts_cached-audio_$$$$.mp3"
-    printf "Audio data saved to: %s\n" "$temp_audio_file"
-
-    # Decode and play audio data using available command
-    echo "$audio_data" | base64 -d > "$temp_audio_file"
-    if [ $(which mpg123 2>/dev/null) ]; then
-        mpg123 "$temp_audio_file"
-    elif [ $(which play 2>/dev/null) ]; then
-        play -t mp3 "$temp_audio_file"
-    elif [ $(which termux-media-player 2>/dev/null) ]; then
-        termux-media-player play "$temp_audio_file"
-    else
-        printf "Please install 'mpg123' or 'sox' to play audio.\n"
-    fi
-
-    # Cache the audio information
-    echo "$TEXT;$VOICE;$audio_data" >> "$CACHE_FILE"
-
-    # Check if cache has more than 1000 entries, if yes, keep the latest 1000
-    cache_size=$(wc -l < "$CACHE_FILE")
-    if [ "$cache_size" -gt 1000 ]; then
-        tail -n 1000 "$CACHE_FILE" > "$CACHE_FILE.tmp"
-        mv "$CACHE_FILE.tmp" "$CACHE_FILE"
-    fi
-else
-    RED='\033[1;31m'        #| Color Red
-    GREEN='\033[0;32m'    #| Color Green
-    PURPLE='\033[0;35m'   #| Color Purple
-    NC='\033[0m'                #| No Color
-    printf "${RED}Failed to retrieve audio content from the API.${NC}\n"
-    printf "The value of VOICE${RED}($2)${NC} might not be correct\n"
-    printf "See documentation at ${PURPLE}https://github.com/xplshn/Handyscripts/blob/main/voices_ttts.md${NC}\n"
-    printf "You can also execute: ${GREEN}curl -SsL https://raw.githubusercontent.com/xplshn/Handyscripts/main/voices_ttts.md${NC}\n"
-fi
