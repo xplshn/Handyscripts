@@ -1,6 +1,8 @@
 #!/bin/sh
 
-# Generate a random number between 1 and 100 using POSIX-compliant arithmetic
+# Random execution...
+
+# Generate a random number between 1 and 100.
 random_number=$(awk 'BEGIN{srand(); print int(100*rand())}')
 
 # Check if the random number falls within the 2% range
