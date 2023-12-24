@@ -1,7 +1,20 @@
 #!/bin/sh
 
-if [ "$(pwd)" = "$HOME" ]; then
-    printf "~"
-else
-    pwd
-fi
+# Function to abbreviate directories under $HOME
+path() {
+    if [ "$PWD" = "$HOME" ]; then
+        [ "$PWD" = "$HOME" ] && [ -n "$COOLHOME" ] || COOLHOME="~"
+        printf '%s' "$COOLHOME"
+
+    elif [ "${PWD#"$HOME"/}" != "$PWD" ]; then
+        [ -n "$COOLHOME_PREFIX" ] || COOLHOME_PREFIX="~"
+        printf '%s' "$COOLHOME_PREFIX/${PWD#"$HOME"/} "  # Display '~/...' for directories inside home
+
+    else
+        printf '%s' "$PWD "  # Display the full path if outside home
+
+    fi
+}
+
+# Print the abbreviated directory path
+path
