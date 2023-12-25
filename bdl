@@ -1,5 +1,5 @@
 #!/bin/sh
-# Not POSIX. See shellcheck's output. Please make an ISSUE in xplshn/Handyscript if you know how to fix those issues in a sane way.
+# Not POSIX. See shellcheck's output. Please make an ISSUE in xplshn/Handyscript if you know how to fix those issues in a sane way. It does work with KSH93, ASH and DASH it seems.
 
 # ANSI color codes
 GREEN='\033[0;32m'
