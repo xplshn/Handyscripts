@@ -206,8 +206,8 @@ bootstrap() {
     fetch_wget_binary() {
         PACKAGE_NAME="$1"
         destination="$TEMP_DIR/bdl_bootstrap/$PACKAGE_NAME"
-        TOOLPACK="https://raw.githubusercontent.com/Azathothas/Toolpacks/main/$SYSTEM_ARCH/$PACKAGE_NAME"
-        BASEU="https://raw.githubusercontent.com/Azathothas/Static-Binaries/main/baseutils/$SYSTEM_ARCH/$PACKAGE_NAME"
+        TOOLPACK="https://raw.githubusercontent.com/Azathothas/Toolpacks/main/$SYSTEM_ARCH"
+        BASEU="https://raw.githubusercontent.com/Azathothas/Static-Binaries/main/baseutils/$SYSTEM_ARCH"
         mkdir -p "$TEMP_DIR/bdl_bootstrap"
         if [ -f "$destination" ]; then
             chmod +x "$destination" &&
@@ -215,7 +215,7 @@ bootstrap() {
             printf "Failed to fetch %s.\n" "$PACKAGE_NAME"
         else
             [ -n "$BASE" ] && source_url="$BASEU" || source_url="$TOOLPACK"
-            wget -O "$destination" "$source_url" &&
+            wget -O "$destination" "$source_url/$PACKAGE_NAME" &&
             chmod +x "$destination" &&
             export PATH="/tmp/bdl_bootstrap:$PATH" ||
             printf "Failed to fetch %s.\n" "$PACKAGE_NAME"
@@ -229,12 +229,12 @@ bootstrap() {
 
     if ! command -v jq >/dev/null 2>&1; then
         printf "jq is not installed. Bootstrapping...\n"
-        BASE="true" fetch_wget_binary "jq"
+        fetch_wget_binary "jq"
     fi
 
     if ! command -v awk >/dev/null 2>&1; then
         printf "awk is not installed. Bootstrapping...\n"
-        fetch_wget_binary "awk"
+        BASE="true" fetch_wget_binary "awk"
     fi
 
     if ! command -v curl >/dev/null 2>&1 || ! command -v awk >/dev/null 2>&1 || ! command -v jq >/dev/null 2>&1; then
