@@ -58,13 +58,13 @@ play_cached_audio() {
     spinner & spinner_pid=$! 
 
     if command -v mpg123 >/dev/null 2>&1; then
-        unnappear mpg123 "$1"
+         mpg123 "$1"
     elif command -v play >/dev/null 2>&1; then
-        unnappear play -t mp3 "$1"
+         play -t mp3 "$1"
     elif command -v termux-media-player >/dev/null 2>&1; then
-        unnappear termux-media-player play "$1"
+         termux-media-player play "$1"
     elif command -v audioplay >/dev/null 2>&1; then
-        unnappear audioplay "$1"
+         audioplay "$1"
     else
         printf "Please install 'mpg123' or 'sox' to play audio.\n"
     fi
