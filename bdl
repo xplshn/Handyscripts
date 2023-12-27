@@ -241,24 +241,39 @@ fSearch() {
 
     # Filter packages based on the search term and format output
     SEARCH_RESULTS=$(printf '%s\n' "$METADATA" | jq -r --arg sterm "$SEARCH_TERM" \
-        '.packages[] | select(.name | test($sterm; "i")) | [.name, .description] | @tsv')
+        '.packages[] | select(.name + .description | test($sterm; "i")) | [.name, .description] | @tsv')
 
     if [ -z "$SEARCH_RESULTS" ]; then
         printf "No matching packages found for '%s'.\n" "$SEARCH_TERM"
     else
-        printf "%s" "$SEARCH_RESULTS" | while IFS=$'\t' read -r PACKAGE_NAME PACKAGE_DESC; do
-            PACKAGE_STATUS=""
-            if [ -f "${INSTALL_DIR}/${PACKAGE_NAME}" ]; then
-                PACKAGE_STATUS="[*]"  # Package is installed
-            else
-                PACKAGE_STATUS="[-]"  # Package is not installed
+        # Array to store unique package names
+        unique_names=()
+
+        # Loop through each line of SEARCH_RESULTS
+        printf "%s\n" "$SEARCH_RESULTS" | while IFS= read -r line; do
+            # Extract package name from the line
+            PACKAGE_NAME=$(printf "%s" "$line" | awk '{print $1}')
+
+            # Check if the name has already been processed
+            if ! printf "%s\n" "${unique_names[@]}" | grep -q "^$PACKAGE_NAME$"; then
+                unique_names+=("$PACKAGE_NAME")  # Add the name to the list of processed names
+
+                # Extract package description from the line
+                PACKAGE_DESC=$(printf "%s" "$line" | cut -f2-)
+
+                PACKAGE_STATUS=""
+                if [ -f "${INSTALL_DIR}/${PACKAGE_NAME}" ]; then
+                    PACKAGE_STATUS="[*]"  # Package is installed
+                else
+                    PACKAGE_STATUS="[-]"  # Package is not installed
+                fi
+
+                # Truncate description if it exceeds a certain length and append "..."
+                TRUNCATED_DESC=$(truncate_text "$PACKAGE_DESC" "$TERMINAL_WIDTH")
+
+                printf "%s %s\t%s\n" "$PACKAGE_STATUS" "$PACKAGE_NAME" "$TRUNCATED_DESC"
             fi
-
-            # Truncate description if it exceeds a certain length and append "..."
-            TRUNCATED_DESC=$(truncate_text "$PACKAGE_DESC" "$TERMINAL_WIDTH")
-
-            printf "%s %s\t%s\n" "$PACKAGE_STATUS" "$PACKAGE_NAME" "$TRUNCATED_DESC"
-        done
+        done | sort -k2
     fi
 }
 
