@@ -1,4 +1,4 @@
-#!/bin/ksh93
+#!/bin/sh
 
 # ANSI color codes
 GREEN='\033[0;32m'
