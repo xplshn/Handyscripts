@@ -6,7 +6,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # Directories, files, etc. NOTE: Not consistent. TODO: Enhance readability, simplify variables.
-INSTALL_DIR=${HOME}/.local/bin
+INSTALL_DIR=${HOME}/.local/share/bin
 TEMP_DIR=/tmp
 CACHE_FILE=${TMPDIR:-${TEMP_DIR}}/bdl_install-less_bins_cached
 SYSTEM_ARCH=$(uname -m)
@@ -150,6 +150,18 @@ install_binary() {
     fi
 }
 
+# Function to remove an installed package
+remove_package() {
+    PACKAGE_NAME="$1"
+    PACKAGE_LOCATION="$INSTALL_DIR/$PACKAGE_NAME"
+
+    if [ -f "$PACKAGE_LOCATION" ]; then
+        rm "$PACKAGE_LOCATION" && print_color "$GREEN" "Package '$PACKAGE_NAME' removed."
+    else
+        print_color "$YELLOW" "Package '$PACKAGE_NAME' is not installed."
+    fi
+}
+
 # Function to retrieve package source URL
 find_url() {
     PACKAGE_NAME="$1"
@@ -200,15 +212,53 @@ show_package_info() {
     fi
 }
 
-# Function to remove an installed package
-remove_package() {
-    PACKAGE_NAME="$1"
-    PACKAGE_LOCATION="$INSTALL_DIR/$PACKAGE_NAME"
+fSearch() {
+    SEARCH_TERM="$1"
+    METADATA_URL="https://raw.githubusercontent.com/metis-os/hysp-pkgs/main/data/metadata.json"
 
-    if [ -f "$PACKAGE_LOCATION" ]; then
-        rm "$PACKAGE_LOCATION" && print_color "$GREEN" "Package '$PACKAGE_NAME' removed."
+    # Fetch metadata
+    METADATA=$(curl -s "$METADATA_URL")
+
+    # Check if metadata retrieval failed
+    if [ -z "$METADATA" ]; then
+        printf "Failed to fetch package information.\n"
+        return
+    fi
+
+    # Get terminal width using tput if available, otherwise set a default width
+    TERMINAL_WIDTH=$(tput cols 2>/dev/null || echo 80)
+
+    # Function to truncate text and append "..."
+    truncate_text() {
+        text="$1"
+        max_length="$2"
+        if [ ${#text} -gt "$max_length" ]; then
+            printf "%s..." "${text:0:max_length-3}"
+        else
+            printf "%s" "$text"
+        fi
+    }
+
+    # Filter packages based on the search term and format output
+    SEARCH_RESULTS=$(printf '%s\n' "$METADATA" | jq -r --arg sterm "$SEARCH_TERM" \
+        '.packages[] | select(.name | test($sterm; "i")) | [.name, .description] | @tsv')
+
+    if [ -z "$SEARCH_RESULTS" ]; then
+        printf "No matching packages found for '%s'.\n" "$SEARCH_TERM"
     else
-        print_color "$YELLOW" "Package '$PACKAGE_NAME' is not installed."
+        printf "%s" "$SEARCH_RESULTS" | while IFS=$'\t' read -r PACKAGE_NAME PACKAGE_DESC; do
+            PACKAGE_STATUS=""
+            if [ -f "${INSTALL_DIR}/${PACKAGE_NAME}" ]; then
+                PACKAGE_STATUS="[*]"  # Package is installed
+            else
+                PACKAGE_STATUS="[-]"  # Package is not installed
+            fi
+
+            # Truncate description if it exceeds a certain length and append "..."
+            TRUNCATED_DESC=$(truncate_text "$PACKAGE_DESC" "$TERMINAL_WIDTH")
+
+            printf "%s %s\t%s\n" "$PACKAGE_STATUS" "$PACKAGE_NAME" "$TRUNCATED_DESC"
+        done
     fi
 }
 
@@ -307,11 +357,14 @@ case $1 in
     install)
         install_binary "$2"
         ;;
-    info)
-        show_package_info "$2"
-        ;;
     remove)
         remove_package "$2"
+        ;;
+    search)
+        fSearch "$2"
+        ;;
+    info)
+        show_package_info "$2"
         ;;
     list)
         list_packages
@@ -320,7 +373,7 @@ case $1 in
         run_from_cache tldr "${@:2}"
         ;;
     *)
-        printf 'Usage: %s {run|install|info|remove|list|tldr} <PACKAGE_NAME>\n' "$0"
+        printf 'Usage: %s {run|install|remove|search|info|list|tldr} <PACKAGE_NAME>\n' "$0"
         exit 1
         ;;
 esac
