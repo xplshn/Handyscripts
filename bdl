@@ -50,43 +50,55 @@ print_color() {
     printf "%b%s%b\\n" "$1" "$2" "$NC"
 }
 
+# Define a helper function to determine which fetcher tool (curl or wget) should be used for bootstrapping
+determine_fetcher() {
+    if command -v wget >/dev/null 2>&1; then
+        FETCHER="wget"
+        FETCHER_TO_BOOTSTRAP="curl"
+    elif command -v curl >/dev/null 2>&1; then
+        FETCHER="curl"
+        FETCHER_TO_BOOTSTRAP="wget"
+    else
+        printf "Neither curl nor wget found. Cannot proceed with bootstrapping.\n"
+        return 1
+    fi
+    bootstrap
+}
+
 fetch_binary() {
     PACKAGE_NAME="$1"
     INSTALL_DIR="$2"
-    DESTINATION="${3:-$PACKAGE_NAME}" # Default DESTINATION
+    DESTINATION="${3:-$INSTALL_DIR/$PACKAGE_NAME}" # Correct DESTINATION path
+    TOOLPACK="https://raw.githubusercontent.com/Azathothas/Toolpacks/main/$SYSTEM_ARCH"
+    BASEU="https://raw.githubusercontent.com/Azathothas/Static-Binaries/main/baseutils/$SYSTEM_ARCH"
 
-    source_url=$(find_url "$PACKAGE_NAME")
+    mkdir -p "$INSTALL_DIR"
 
-    if [ -z "$source_url" ]; then
+    SOURCE_URL=$(find_url "$PACKAGE_NAME")
+
+    if [ -z "$SOURCE_URL" ]; then
         print_color "$YELLOW" "Source URL not found for '$PACKAGE_NAME'."
         return 1
     fi
 
-    mkdir -p "$INSTALL_DIR"  # Ensure the directory exists
-
     # Start spinner in the background
+    COOLSPINNER_COLOR='\033[92m'
     spinner & spinner_pid=$!
 
-    if eval "$FETCHER -O \"$INSTALL_DIR/$DESTINATION\" \"$source_url\"" && chmod +x "$INSTALL_DIR/$DESTINATION"; then
-        # Kill the spinner after download completes
-        kill "$spinner_pid" >/dev/null 2>&1
-
-        # Clear the line
-        printf "\033[2K\r"
-
-        print_color "$GREEN" "Fetched binary successfully."
-
-        return 0
+    if [ "$FETCHER" = "curl" ]; then
+        "$FETCHER" -o "$DESTINATION" "$SOURCE_URL" >/dev/null 2>&1 &&
+        chmod +x "$DESTINATION" &&
+        kill "$spinner_pid" >/dev/null 2>&1 &&
+        printf "\033[2K\r" &&
+        print_color "$GREEN" "Fetched binary successfully." ||
+        print_color "$YELLOW" "Failed to fetch $PACKAGE_NAME."
     else
-        # Kill the spinner if download fails
-        kill "$spinner_pid" >/dev/null 2>&1
-
-        # Clear the line
-        printf "\033[2K\r"
-
-        print_color "$YELLOW" "Failed to fetch binary."
-
-        return 1
+        "$FETCHER" -O "$DESTINATION" "$SOURCE_URL" >/dev/null 2>&1 &&
+        chmod +x "$DESTINATION" &&
+        kill "$spinner_pid" >/dev/null 2>&1 &&
+        printf "\033[2K\r" &&
+        print_color "$GREEN" "Fetched binary successfully." ||
+        print_color "$YELLOW" "Failed to fetch $PACKAGE_NAME."
     fi
 }
 
@@ -95,9 +107,9 @@ return_cached_file() {
     PACKAGE_NAME="$1"
 
     if [ -f "$CACHE_FILE" ] && grep -q "^$PACKAGE_NAME " "$CACHE_FILE"; then
-        cached_location=$(grep -E "^$PACKAGE_NAME " "$CACHE_FILE" | awk '{ print $2 }')
-        if [ -n "$cached_location" ]; then
-            printf "%s\n" "$cached_location"
+        CACHED_LOCATION=$(grep -E "^$PACKAGE_NAME " "$CACHE_FILE" | awk '{ print $2 }')
+        if [ -n "$CACHED_LOCATION" ]; then
+            printf "%s\n" "$CACHED_LOCATION"
             return 0
         fi
     fi
@@ -126,19 +138,19 @@ clean_cache() {
 # Function to run from cache or fetch if not found
 run_from_cache() {
     PACKAGE_NAME="$1"
-    cached_location=$(return_cached_file "$PACKAGE_NAME")
+    CACHED_LOCATION=$(return_cached_file "$PACKAGE_NAME")
 
-    if [ -n "$cached_location" ] && [ -x "$TEMP_DIR/$cached_location" ]; then
+    if [ -n "$CACHED_LOCATION" ] && [ -x "$TEMP_DIR/$CACHED_LOCATION" ]; then
         printf "%bRunning '%s' from cache...%b\n" "$GREEN" "$PACKAGE_NAME" "$NC"
         clean_cache
-        "$TEMP_DIR/$cached_location" "${@:2}" # Pass additional parameters as flags
+        "$TEMP_DIR/$CACHED_LOCATION" "${@:2}" # Pass additional parameters as flags
         return 0
     else
-        new_cached_location="bdl_$PACKAGE_NAME-$(date +'%s')"
-        if fetch_binary "$PACKAGE_NAME" "$TEMP_DIR" "$new_cached_location"; then
-            echo "$PACKAGE_NAME $new_cached_location" >> "$CACHE_FILE" # Update cache with the fetched binary
+        NEW_CACHED_LOCATION="bdl_$PACKAGE_NAME-$(date +'%s')"
+        if fetch_binary "$PACKAGE_NAME" "$TEMP_DIR" "$TEMP_DIR/$NEW_CACHED_LOCATION"; then
+            echo "$PACKAGE_NAME $NEW_CACHED_LOCATION" >> "$CACHE_FILE" # Update cache with the fetched binary
             clean_cache # Clean the cache
-            "$TEMP_DIR/$new_cached_location" "${@:2}" # Execute the fetched binary
+            "$TEMP_DIR/$NEW_CACHED_LOCATION" "${@:2}" # Execute the fetched binary
             return 0
         else
             printf "%bFailed to fetch binary '%s'.%b\n" "$YELLOW" "$PACKAGE_NAME" "$NC"
@@ -164,11 +176,11 @@ install_binary() {
     fi
 
     # Get the cached location of the package
-    cached_location=$(return_cached_file "$PACKAGE_NAME")
+    CACHED_LOCATION=$(return_cached_file "$PACKAGE_NAME")
 
-    if [ -n "$cached_location" ] && [ -x "$TEMP_DIR/$cached_location" ]; then
+    if [ -n "$CACHED_LOCATION" ] && [ -x "$TEMP_DIR/$CACHED_LOCATION" ]; then
         print_color "$GREEN" "Installing '$PACKAGE_NAME' from cache..."
-        mv "$TEMP_DIR/$cached_location" "$INSTALL_DIR/$PACKAGE_NAME"
+        mv "$TEMP_DIR/$CACHED_LOCATION" "$INSTALL_DIR/$PACKAGE_NAME"
         clean_cache # Remove duplicates and non-existent files from the cache
         return
     fi
@@ -194,21 +206,36 @@ remove_package() {
 find_url() {
     PACKAGE_NAME="$1"
     METADATA_URL="https://raw.githubusercontent.com/metis-os/hysp-pkgs/main/data/metadata.json"
+
+    if [ -n "$NO_METADATA" ]; then
+        if [ -n "$BASE" ]; then
+            printf "https://raw.githubusercontent.com/Azathothas/Static-Binaries/main/baseutils/$SYSTEM_ARCH/$PACKAGE_NAME\n"
+        else
+            printf "https://raw.githubusercontent.com/Azathothas/Toolpacks/main/$SYSTEM_ARCH/$PACKAGE_NAME\n"
+        fi
+        return
+    fi
+
     SOURCE_URL=$(curl -s "$METADATA_URL" | jq -r --arg pname "$PACKAGE_NAME" --arg sysarch "$SYSTEM_ARCH" \
         '.packages[] | select(.name == $pname and .architecture == $sysarch) | .source')
+    
     # Check if source URL is empty
     if [ -z "$SOURCE_URL" ]; then
         LIST_PACKAGES_RESULT=$(list_packages | grep "^$PACKAGE_NAME$")
         if [ -n "$LIST_PACKAGES_RESULT" ]; then
             SOURCE_URL="https://raw.githubusercontent.com/Azathothas/Toolpacks/main/$SYSTEM_ARCH/$PACKAGE_NAME"
+        else
+            SOURCE_URL="https://raw.githubusercontent.com/Azathothas/Toolpacks/main/$SYSTEM_ARCH/$PACKAGE_NAME"
         fi
     fi
+
     # Check if the SOURCE_URL returns 404
     if [ -n "$SOURCE_URL" ]; then
         if ! curl --output /dev/null --silent --head --fail "$SOURCE_URL"; then
             SOURCE_URL="https://raw.githubusercontent.com/Azathothas/Static-Binaries/main/baseutils/$SYSTEM_ARCH/$PACKAGE_NAME"
         fi
     fi
+
     printf '%s\n' "$SOURCE_URL"
 }
 
@@ -245,68 +272,52 @@ show_package_info() {
 }
 
 fSearch() {
-    SEARCH_TERM="$1"
-    METADATA_URL="https://raw.githubusercontent.com/metis-os/hysp-pkgs/main/data/metadata.json"
+  SEARCH_TERM="$1"
+  METADATA_URL="https://raw.githubusercontent.com/metis-os/hysp-pkgs/main/data/metadata.json"
 
-    # Fetch metadata
-    METADATA=$(curl -s "$METADATA_URL")
+  # Fetch metadata
+  METADATA=$(curl -s "$METADATA_URL")
 
-    # Check if metadata retrieval failed
-    if [ -z "$METADATA" ]; then
-        printf "Failed to fetch package information.\n"
-        return
-    fi
+  # Check if metadata retrieval failed
+  if [ -z "$METADATA" ]; then
+    printf "Failed to fetch package information.\n"
+    return 1
+  fi
 
-    # Get terminal width using tput if available, otherwise set a default width
-    TERMINAL_WIDTH=$(tput cols 2>/dev/null || echo 80)
+  # Filter packages based on the search term
+  SEARCH_RESULTS=$(printf '%s\n' "$METADATA" | jq -r --arg sterm "$SEARCH_TERM" \
+    '.packages[] | select(.name + .description | test($sterm; "i")) | "\(.name) - \(.description)"' | sort -u)
 
-    # Function to truncate text and append "..."
-    truncate_text() {
-        text="$1"
-        max_length="$2"
-        if [ ${#text} -gt "$max_length" ]; then
-            printf "%s..." "${text:0:max_length-3}"
-        else
-            printf "%s" "$text"
-        fi
-    }
+  # Check if no matching packages found
+  if [ -z "$SEARCH_RESULTS" ]; then
+    printf "No matching packages found for '%s'.\n" "$SEARCH_TERM"
+    return 0
+  fi
 
-    # Filter packages based on the search term and format output
-    SEARCH_RESULTS=$(echo "$METADATA" | jq -r --arg sterm "$SEARCH_TERM" \
-        '.packages[] | select(.name + .description | test($sterm; "i")) | [.name, .description] | @tsv')
+  # Determine the truncation length
+  TRUNC_LENGTH=$(($(tput cols) - 3))
 
-    if [ -z "$SEARCH_RESULTS" ]; then
-        printf "No matching packages found for '%s'.\n" "$SEARCH_TERM"
+  # Check if the package binary exists in the INSTALL_DIR and print results with installation state indicators
+  printf '%s\n' "$SEARCH_RESULTS" | while IFS= read -r line; do
+    NAME=$(echo "$line" | awk -F ' - ' '{print $1}')
+    DESCRIPTION=$(echo "$line" | awk -F ' - ' '{$1=""; print substr($0,2)}')
+    CACHED_LOCATION=$(return_cached_file "$NAME")
+    if [ -f "$INSTALL_DIR/$NAME" ]; then
+      PREFIX="[i]"
+    elif [ -n "$CACHED_LOCATION" ] && [ -x "$TEMP_DIR/$CACHED_LOCATION" ]; then
+      PREFIX="[c]"
     else
-        # Array to store unique package names
-        unique_names=()
-
-        # Loop through each line of SEARCH_RESULTS
-        while IFS= read -r line; do
-            # Extract package name from the line
-            PACKAGE_NAME=$(echo "$line" | awk '{print $1}')
-
-            # Check if the name has already been processed
-            if ! printf '%s\n' "${unique_names[@]}" | grep -q "$PACKAGE_NAME"; then
-                unique_names+=("$PACKAGE_NAME")  # Add the name to the list of processed names
-
-                # Extract package description from the line
-                PACKAGE_DESC=$(echo "$line" | cut -f2-)
-
-                PACKAGE_STATUS=""
-                if [ -f "${INSTALL_DIR}/${PACKAGE_NAME}" ]; then
-                    PACKAGE_STATUS="[*]"  # Package is installed
-                else
-                    PACKAGE_STATUS="[-]"  # Package is not installed
-                fi
-
-                # Truncate description if it exceeds a certain length and append "..."
-                TRUNCATED_DESC=$(truncate_text "$PACKAGE_DESC" "$TERMINAL_WIDTH")
-
-                printf "%s %s\t%s\n" "$PACKAGE_STATUS" "$PACKAGE_NAME" "$TRUNCATED_DESC"
-            fi
-        done
+      PREFIX="[-]"
     fi
+
+    # Truncate the description if it exceeds the truncation length
+    if [ ${#DESCRIPTION} -gt "$TRUNC_LENGTH" ]; then
+      DESCRIPTION=$(printf '%s' "$DESCRIPTION" | cut -c 1-"$TRUNC_LENGTH")
+      DESCRIPTION="${DESCRIPTION}..."
+    fi
+
+    printf "%s %s - %s\n" "$PREFIX" "$NAME" "$DESCRIPTION"
+  done
 }
 
 # Function to list all possible packages
@@ -321,92 +332,30 @@ list_packages() {
     printf "\033[2K\r%s\n" "$packages"
 }
 
-bootstrap_binary() {
-    PACKAGE_NAME="$1"
-    DESTINATION="$TEMP_DIR/bdl_bootstrap/$PACKAGE_NAME"
-    TOOLPACK="https://raw.githubusercontent.com/Azathothas/Toolpacks/main/$SYSTEM_ARCH"
-    BASEU="https://raw.githubusercontent.com/Azathothas/Static-Binaries/main/baseutils/$SYSTEM_ARCH"
-
-    mkdir -p "$TEMP_DIR/bdl_bootstrap"
-
-    if [ -f "$DESTINATION" ]; then
-        printf "Using previously bootstrapped binary for $PACKAGE_NAME at $DESTINATION\n"
-        chmod +x "$DESTINATION"
-    else
-        if [ -n "$BASE" ]; then
-            source_url="$BASEU"
-        else
-            source_url="$TOOLPACK"
-        fi
-
-        determine_fetcher
-
-        # Start spinner in the background
-        COOLSPINNER_COLOR='\033[92m'
-        spinner & spinner_pid=$!
-
-        if [ "$FETCHER" = "curl" ]; then
-            "$FETCHER" -o "$DESTINATION" "$source_url/$PACKAGE_NAME" >/dev/null 2>&1 &&
-            kill "$spinner_pid" >/dev/null 2>&1 &&
-            printf "\033[2K\r" &&
-            chmod +x "$DESTINATION" ||
-            print_color "Failed to fetch $PACKAGE_NAME." "yellow"
-        elif [ "$FETCHER" = "wget" ]; then
-            "$FETCHER" -O "$DESTINATION" "$source_url/$PACKAGE_NAME" >/dev/null 2>&1 &&
-            kill "$spinner_pid" >/dev/null 2>&1 &&
-            printf "\033[2K\r" &&
-            chmod +x "$DESTINATION" ||
-            print_color "Failed to fetch $PACKAGE_NAME." "yellow"
-        else
-            print_color "Neither curl nor wget could be found. Cannot proceed with bootstrapping." "yellow"
-        fi
-    fi
-}
-
 bootstrap() {
-    # Define a helper function to determine which fetcher tool (curl or wget) should be used for bootstrapping
-    determine_fetcher() {
-        if command -v wget >/dev/null 2>&1 || command -v curl >/dev/null 2>&1; then
-            if command -v wget >/dev/null 2>&1; then
-                FETCHER="wget"
-            else
-                FETCHER="curl"
-            fi
-
-            if [ "$FETCHER" = "curl" ] && ! command -v curl >/dev/null 2>&1; then
-                FETCHER_TO_BOOTSTRAP="curl"
-            elif [ "$FETCHER" = "wget" ] && ! command -v wget >/dev/null 2>&1; then
-                FETCHER_TO_BOOTSTRAP="wget"
-            fi
-        else
-            printf "Neither curl nor wget found. Cannot proceed with bootstrapping.\n" && return 1
-        fi
-    }
-
-    determine_fetcher
-
-    export PATH="/tmp/bdl_bootstrap:$PATH"
-
+    mkdir -p "$TEMP_DIR/bdl_bootstrap"
+    export PATH="$TEMP_DIR/bdl_bootstrap:$PATH"
     if [ -n "$FETCHER" ]; then
-        if [ "$FETCHER" != "curl" ] && ! command -v curl >/dev/null 2>&1; then
-            printf "${YELLOW}$FETCHER_TO_BOOTSTRAP is not installed. Bootstrapping...${NC}\n"
-            bootstrap_binary "$FETCHER_TO_BOOTSTRAP"
+        export NO_METADATA=1
+        if ! command -v curl >/dev/null 2>&1; then
+            print_color "${YELLOW}" "$FETCHER_TO_BOOTSTRAP" "is not installed. Bootstrapping..."
+            fetch_binary "$FETCHER_TO_BOOTSTRAP" "$TEMP_DIR/bdl_bootstrap"
         fi
 
         if ! command -v jq >/dev/null 2>&1; then
-            printf "${YELLOW}jq is not installed. Bootstrapping...${NC}\n"
-            bootstrap_binary "jq"
+            print_color "${YELLOW}" "jq is not installed. Bootstrapping..."
+            fetch_binary "jq" "$TEMP_DIR/bdl_bootstrap"
         fi
 
         if ! command -v awk >/dev/null 2>&1; then
-            printf "${YELLOW}awk is not installed. Bootstrapping...${NC}\n"
-            BASE="true" bootstrap_binary "awk"
+            print_color "${YELLOW}" "awk is not installed. Bootstrapping..."
+            BASE="true" fetch_binary "awk" "$TEMP_DIR/bdl_bootstrap"
         fi
+        unset NO_METADATA
     fi
 }
 
-bootstrap
-
+determine_fetcher
 case $1 in
     run)
         run_from_cache "$2" "${@:3}"
