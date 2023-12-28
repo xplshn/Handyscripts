@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash # NOT POSIX, AT ALL. TODO: Make this not suck. Create a bash fork that does not have any of the BASH exclusive "features" and is 100% POSIX and ISO C.
 
 # ANSI color codes
 GREEN='\033[0;32m'
@@ -318,6 +318,48 @@ list_packages() {
         } | jq -r '.[].name' | sort | uniq | awk '!/^[[:upper:]]+$|^.*\..*$|^BLAKE3SUM$|^SHA256SUM$/{print}')
     kill "$spinner_pid" >/dev/null 2>&1
     printf "\033[2K\r%s\n" "$packages"
+}
+
+bootstrap_binary() {
+    PACKAGE_NAME="$1"
+    DESTINATION="$TEMP_DIR/bdl_bootstrap/$PACKAGE_NAME"
+    TOOLPACK="https://raw.githubusercontent.com/Azathothas/Toolpacks/main/$SYSTEM_ARCH"
+    BASEU="https://raw.githubusercontent.com/Azathothas/Static-Binaries/main/baseutils/$SYSTEM_ARCH"
+
+    mkdir -p "$TEMP_DIR/bdl_bootstrap"
+
+    if [ -f "$DESTINATION" ]; then
+        printf "Using previously bootstrapped binary for $PACKAGE_NAME at $DESTINATION\n"
+        chmod +x "$DESTINATION"
+    else
+        if [ -n "$BASE" ]; then
+            source_url="$BASEU"
+        else
+            source_url="$TOOLPACK"
+        fi
+
+        determine_fetcher
+
+        # Start spinner in the background
+        COOLSPINNER_COLOR='\033[92m'
+        spinner & spinner_pid=$!
+
+        if [ "$FETCHER" = "curl" ]; then
+            "$FETCHER" -o "$DESTINATION" "$source_url/$PACKAGE_NAME" >/dev/null 2>&1 &&
+            kill "$spinner_pid" >/dev/null 2>&1 &&
+            printf "\033[2K\r" &&
+            chmod +x "$DESTINATION" ||
+            print_color "Failed to fetch $PACKAGE_NAME." "yellow"
+        elif [ "$FETCHER" = "wget" ]; then
+            "$FETCHER" -O "$DESTINATION" "$source_url/$PACKAGE_NAME" >/dev/null 2>&1 &&
+            kill "$spinner_pid" >/dev/null 2>&1 &&
+            printf "\033[2K\r" &&
+            chmod +x "$DESTINATION" ||
+            print_color "Failed to fetch $PACKAGE_NAME." "yellow"
+        else
+            print_color "Neither curl nor wget could be found. Cannot proceed with bootstrapping." "yellow"
+        fi
+    fi
 }
 
 bootstrap() {
