@@ -1,4 +1,5 @@
-#!/bin/bash # NOT POSIX, AT ALL. TODO: Make this not suck. Create a bash fork that does not have any of the BASH exclusive "features" and is 100% POSIX and ISO C.
+#!/bin/bash
+# NOT POSIX, AT ALL. TODO: Make this not suck. Create a bash fork that does not have any of the BASH exclusive "features" and is 100% POSIX and ISO C.
 
 # ANSI color codes
 GREEN='\033[0;32m'
