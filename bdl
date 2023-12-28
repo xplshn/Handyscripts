@@ -1,4 +1,5 @@
-#!/bin/bash # NOT POSIX, AT ALL. TODO: Make this not suck. Create a bash fork that does not have any of the BASH exclusive "features" and is 100% POSIX and ISO C.
+#!/bin/bash 
+# NOT POSIX, AT ALL. TODO: Make this not suck. Create a bash fork that does not have any of the BASH exclusive "features" and is 100% POSIX and ISO C.
 
 # ANSI color codes
 GREEN='\033[0;32m'
@@ -66,7 +67,7 @@ fetch_binary() {
     # Start spinner in the background
     spinner & spinner_pid=$!
 
-    if eval "$FETCHER -O \"$INSTALL_DIR/$DESTINATION\" \"$source_url\"" && chmod +x "$INSTALL_DIR/$DESTINATION"; then
+    if eval "$FETCHER -qO \"$INSTALL_DIR/$DESTINATION\" \"$source_url\"" && chmod +x "$INSTALL_DIR/$DESTINATION"; then
         # Kill the spinner after download completes
         kill "$spinner_pid" >/dev/null 2>&1
 
