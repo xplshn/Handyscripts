@@ -357,6 +357,16 @@ bootstrap() {
             print_color "${YELLOW}" "awk is not installed. Bootstrapping..."
             BASE="true" fetch_binary "awk" "$TEMP_DIR/bdl_bootstrap"
         fi
+
+        if ! command -v tput >/dev/null 2>&1; then
+            print_color "${YELLOW}" "tput is not installed. Bootstrapping..."
+            BASE="true" fetch_binary "tput" "$TEMP_DIR/bdl_bootstrap"
+        fi
+
+        #if ! command -v bash >/dev/null 2>&1; then
+        #    print_color "${YELLOW}" "bash is not installed. Bootstrapping..."
+        #    BASE="true" fetch_binary "bash" "$TEMP_DIR/bdl_bootstrap"
+        #fi
         unset NO_METADATA
     fi
 }
