@@ -47,6 +47,21 @@
 > /usr/local/bin/cargo
 > /usr/bin/cargo
 > ```
----
+- [**pelf**<img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/bash/bash-original.svg" width="30" height="30">](https://github.com/xplshn/Handyscripts/blob/main/pelf) **➼** PELF or rather, portable elf is a utility that creates a bundle of a dynamic binary, it takes a binary and budles its dependencies into a single, executable file.
+> - It needs tar, base64, tail and other commands. It might use non POSIX features from the coreutils.
+> ```sh
+> $ pelf $(which chocolate-doom) ./chocolate-doom.blob # The name can not be set arbitrarily.
+> $ ./chocolate-doom.blob
+>                          Chocolate Doom 3.0.1
+> Z_Init: Init zone memory allocation daemon. 
+> zone memory: 0x7fd294494020, 1000000 allocated for zone
+> Using /tmp/.local/share/chocolate-doom/ for configuration and saves
+> V_Init: allocate screens.
+> M_LoadDefaults: Load system defaults.
+> saving config in /tmp/.local/share/chocolate-doom/default.cfg
+> Game mode indeterminate.  No IWAD file was found.  Try
+> specifying one with the '-iwad' command line parameter.
+> # as you can see, it works. But it should be used with care, and not everything will work, it is a janky thing to do anyways, best bet is to recompile your things as static binaries
+> ```
 - [**xpointerkeys**<img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/bash/bash-original.svg" width="30" height="30">](https://github.com/xplshn/Handyscripts/blob/main/xpointerkeys) **➼** Enables X's pointerkeys feature "setxkbmap -option "keypad:pointerkeys".
 ---
