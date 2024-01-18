@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 # NOT POSIX, AT ALL. TODO: Make this not suck. Create a bash fork that does not have any of the BASH exclusive "features" and is 100% POSIX and ISO C.
 
 # ANSI color codes
@@ -12,7 +12,6 @@ TEMP_DIR=/tmp
 CACHE_FILE=${TMPDIR:-${TEMP_DIR}}/bdl_install-less_bins_cached
 SYSTEM_ARCH=$(uname -m)
 
-# Display a spinner loader with default colors
 spinner() {
     if [ -z "$COOLSPINNER" ]; then
         COOLSPINNER='|/~\\'
@@ -343,6 +342,13 @@ bootstrap() {
     export PATH="$TEMP_DIR/bdl_bootstrap:$PATH"
     if [ -n "$FETCHER" ]; then
         export NO_METADATA=1
+
+        if ! command -v bash >/dev/null 2>&1; then
+            print_color "${YELLOW}" "bash is not available. Bootstrapping..."
+            BASE="true" fetch_binary "bash" "$TEMP_DIR/bdl_bootstrap"
+            exec bash "$0" "$@" # This way, the next run, as long as bash is available or cached, BDL will run under bash.
+        fi
+
         if ! command -v curl >/dev/null 2>&1; then
             print_color "${YELLOW}" "$FETCHER_TO_BOOTSTRAP" "is not installed. Bootstrapping..."
             fetch_binary "$FETCHER_TO_BOOTSTRAP" "$TEMP_DIR/bdl_bootstrap"
@@ -359,14 +365,10 @@ bootstrap() {
         fi
 
         if ! command -v tput >/dev/null 2>&1; then
-            print_color "${YELLOW}" "tput is not installed. Bootstrapping..."
+            print_color "${YELLOW}" "tput is not available (from the netcurses package). Bootstrapping..."
             BASE="true" fetch_binary "tput" "$TEMP_DIR/bdl_bootstrap"
         fi
-
-        #if ! command -v bash >/dev/null 2>&1; then
-        #    print_color "${YELLOW}" "bash is not installed. Bootstrapping..."
-        #    BASE="true" fetch_binary "bash" "$TEMP_DIR/bdl_bootstrap"
-        #fi
+        
         unset NO_METADATA
     fi
 }
