@@ -1,5 +1,6 @@
 #!/bin/sh
 # NOT POSIX, AT ALL. TODO: Make this not suck. Create a bash fork that does not have any of the BASH exclusive "features" and is 100% POSIX and ISO C.
+# UPDATE: POSIX syntax. Still relies on undefined behaviour/BASHisms/features the GNU might have accidentally implemented in their attempt to rework Thompson Shell.
 
 # ANSI color codes
 GREEN='\033[0;32m'
