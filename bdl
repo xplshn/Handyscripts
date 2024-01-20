@@ -16,7 +16,7 @@ SYSTEM_ARCH="$(uname -m)" # For use with arm64 set to aarch64_arm64
 
 spinner() {
     if [ -z "$COOLSPINNER" ]; then
-        COOLSPINNER='|/~\\'
+        COOLSPINNER='|/-\\'
     fi
 
     if [ -z "$COOLSPINNER_COLOR" ]; then
