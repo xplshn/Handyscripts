@@ -299,7 +299,7 @@ fSearch() {
   fi
 
   # Determine the truncation length
-  TRUNC_LENGTH=$(($(tput cols) - 3))
+  TRUNC_LENGTH=$(( $(tput cols 2>/dev/null || echo "80") - 3 ))
 
   # Check if the package binary exists in the INSTALL_DIR and print results with installation state indicators
   printf '%s\n' "$SEARCH_RESULTS" | while IFS= read -r line; do
