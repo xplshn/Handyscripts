@@ -19,9 +19,9 @@ if [ -z "$BASH_VERSION" ]; then
     PATH="$PATH:$TEMP_DIR/bdl_bootstrap"
     if command -v bash >/dev/null 2>&1; then
         exec bash "$0" "$@"
-    fi
     else
-    echo "Running under SH, some features might not work(run), unless bash is installed or bootstrapped, there will be undefined behaviour."
+        echo "Running under SH, some features might not work(run), unless bash is installed or bootstrapped, there will be undefined behaviour."
+    fi
 fi
 
 spinner() {
