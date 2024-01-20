@@ -14,6 +14,16 @@ CACHE_FILE="${TMPDIR:-${TEMP_DIR}}/bdl_install-less_bins_cached"
 METADATA_URL="https://raw.githubusercontent.com/metis-os/hysp-pkgs/main/data/metadata.json"
 SYSTEM_ARCH="$(uname -m)" # For use with arm64 set to aarch64_arm64
 
+if [ -z "$BASH_VERSION" ]; then
+    # Check if bash is available
+    PATH="$PATH:$TEMP_DIR/bdl_bootstrap"
+    if command -v bash >/dev/null 2>&1; then
+        exec bash "$0" "$@"
+    fi
+    else
+    echo "Running under SH, some features might not work(run), unless bash is installed or bootstrapped, there will be undefined behaviour."
+fi
+
 spinner() {
     if [ -z "$COOLSPINNER" ]; then
         COOLSPINNER='|/-\\'
