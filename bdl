@@ -355,7 +355,6 @@ bootstrap() {
         if ! command -v bash >/dev/null 2>&1; then
             print_color "${YELLOW}" "bash is not available. Bootstrapping..."
             BASE="true" fetch_binary "bash" "$TEMP_DIR/bdl_bootstrap"
-            exec bash "$0" "$@" # This way, the next run, as long as bash is available or cached, BDL will run under bash.
         fi
 
         if ! command -v "$FETCHER_TO_BOOTSTRAP" >/dev/null 2>&1; then
