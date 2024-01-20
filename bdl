@@ -394,7 +394,7 @@ case $1 in
         list_packages
         ;;
     tldr)
-        run_from_cache tldr "${@:2}"
+        run_from_cache tlrc "${@:2}" # Official TL;DR pages client written in Rust.
         ;;
     *)
         printf 'Usage: %s {run|install|remove|search|info|list|tldr} <PACKAGE_NAME>\n' "$0"
