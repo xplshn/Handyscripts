@@ -372,8 +372,7 @@ bootstrap() {
     fi
 }
 
-determine_fetcher && bootstrap
-
+determine_fetcher && bootstrap &&
 case $1 in
     run)
         run_from_cache "$2" "${@:3}"
