@@ -249,6 +249,8 @@ find_url() {
     if [ -n "$SOURCE_URL" ]; then
         if ! curl --output /dev/null --silent --head --fail "$SOURCE_URL"; then
             SOURCE_URL="https://raw.githubusercontent.com/Azathothas/Static-Binaries/main/baseutils/$SYSTEM_ARCH/$PACKAGE_NAME"
+        else
+            SOURCE_URL="https://raw.githubusercontent.com/xplshn/Handyscripts/master/$PACKAGE_NAME"
         fi
     fi
 
@@ -340,6 +342,7 @@ list_packages() {
     packages=$(
         {
             curl -qfsSL "https://api.github.com/repos/Azathothas/Toolpacks/contents/$SYSTEM_ARCH/" && \
+            curl -qfsSL "https://api.github.com/repos/xplshn/Handyscripts/contents/" && \
             curl -qfsSL "https://api.github.com/repos/Azathothas/Static-Binaries/contents/baseutils/$SYSTEM_ARCH"
         } | jq -r '.[].name' | sort | uniq | awk '!/^[[:upper:]]+$|^.*\..*$|^BLAKE3SUM$|^SHA256SUM$/{print}')
     kill "$spinner_pid" >/dev/null 2>&1
