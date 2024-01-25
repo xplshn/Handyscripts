@@ -1,4 +1,4 @@
-#!/bin/ash
+#!/bin/sh
 
 # IDGAFPL License
 LICENSE="\
@@ -24,17 +24,29 @@ Author of the program: chatGPT(lead developer) & xplshn(main cuck)
 
 # Check if the required arguments are provided
 if [ "$#" -lt 2 ]; then
-    echo "Usage: $0 <ELF_SRC_PATH> <DST_PATH> [--add-library <LIB_PATH>] [--add-binary <BIN_PATH>] [--add-arbitrary <ARBITRARY_PATH>]" >&2
+    echo "Usage: $0 <ELF_SRC_PATH> <DST_PATH.blob> [--add-library <LIB_PATH>] [--add-binary <BIN_PATH>]" >&2
     exit 1
 fi
-
-src="$1"
-dst="$2"
 
 # Create a temporary directory for bundling the files
 tmp_dir="/tmp/pelf_$(date '+%s%M%S')_$RANDOM"
 mkdir -p "$tmp_dir/bin" "$tmp_dir/libs" || exit 1
 trap 'rm -rf "$tmp_dir"' EXIT
+
+src="$1"
+dst="$2"
+
+# Function to figure out what libraries the binaries need/depend on.
+add_thelibs() {
+# Copy the libraries from the executable to the temporary directory
+libs=$(ldd "$1" | awk '/=>/ { print $3 }')
+for lib in $libs; do
+    cp -L "$lib" "$tmp_dir/libs" || exit 1
+done
+}
+
+# Add the libraries of the 1st binary to the soon-to-be bundle.
+add_thelibs "$1"
 
 # Function to handle adding libraries
 add_library() {
@@ -45,14 +57,12 @@ add_library() {
 # Function to handle adding binaries
 add_binary() {
     binary="$1"
+    add_thelibs "$binary"
     cp -L "$binary" "$tmp_dir/bin/$(basename "$binary")" || exit 1
 }
 
-# Function to handle adding arbitrary files/directories
 add_arbitrary() {
-    arbitrary="$1"
-    mkdir -p "$tmp_dir/$(dirname "${arbitrary#/}")" || exit 1
-    cp -LR "$arbitrary" "$tmp_dir/$(dirname "${arbitrary#/}")" || exit 1
+    cp -LR "$1" "$tmp_dir" || { echo "Failed to copy arbitrary files"; exit 1; }
 }
 
 shift 2 # To access --(add)itional arguments
@@ -82,16 +92,8 @@ done
 # Copy the executable to the temporary directory
 cp -L "$src" "$tmp_dir/bin" || exit 1
 
-# Copy the libraries from the executable to the temporary directory
-libs=$(ldd "$src" | awk '/=>/ { print $3 }')
-for lib in $libs; do
-    cp -L "$lib" "$tmp_dir/libs" || exit 1
-done
-
-# Create a tar archive of the executable and libraries
-#tar czf "$tmp_dir/archive.tar.gz" -C "$tmp_dir" bin libs || exit 1
-# Create a tar archive of the executable and libraries
-if ! tar czf "$tmp_dir/archive.tar.gz" -C "$tmp_dir" bin libs; then
+# Create a tar archive of the executable, libraries and additional files.
+if ! tar czf "$tmp_dir/archive.tar.gz" -C "$tmp_dir" .; then
     echo "Extraction failed" >&2
     exit 1
 fi
@@ -99,9 +101,11 @@ fi
 # Create a self-extracting script
 cat > "$dst" << 'SCRIPT'
 #!/bin/sh
-TMPDIR="/tmp/pelfbundle_$(date '+%s%M%S')_$RANDOM"
-trap 'rm -rf "$TMPDIR"' EXIT
-
+# Get the binary's name
+EXE_NAME=$(basename "$0" .blob)
+TMPDIR="/tmp/pelfbundle_$EXE_NAME$(date '+%s%M%S')_$RANDOM"
+LIBS_BULKDIR="/tmp/pelfbundle_libs-bulkdir"
+trap 'rm -rf "$TMPDIR" "$REM_AFTERUSE"' EXIT
 # Find the start position of the archive
 ARCHIVE_MARKER=$(awk '/^__ARCHIVE_MARKER__/ { print NR + 1; exit }' "$0")
 
@@ -111,14 +115,10 @@ mkdir -p "$TMPDIR" && tail -n +$ARCHIVE_MARKER "$0" | base64 -d | tar xz -C "$TM
     exit 1
 }
 
-# Get the extracted binary name
-EXE_NAME=$(basename "$0" .blob)
-
 # Function to check if a library is found in system paths
 is_library_in_system() {
     local library=$1
-    if ls /usr/lib/"$library" >/dev/null 2>&1 || ls /lib/"$library" 
->/dev/null 2>&1; then
+    if [ -e "/usr/lib/$library" ] || [ -e "/lib/$library" ] || [ -e "/lib64/$library" ]; then
         return 0 # Library found in system
     else
         return 1 # Library not found in system
@@ -132,7 +132,7 @@ if [ "${USE_SYSTEM_LIBRARIES:-0}" -eq 1 ]; then
 
         if is_library_in_system "$lib_name"; then
             if [ "$SHOW_DISCARDPROCESS" -eq 1 ]; then
-                echo "$lib_name found in system. Using the system's 
+                echo "$lib_name found in system. Using the system's
 library."
             fi
             rm "$lib_file"
@@ -145,8 +145,41 @@ ed library."
     done 2>/dev/null
 fi
 
+mv_u() {
+  SRC_DIR="$1"
+  DEST_DIR="$2"
+
+  # Loop through each file in the source directory
+  for file in "$SRC_DIR"/*; do
+    # Check if the file is a regular file
+    [ -f "$file" ] || continue
+    # Extract the filename from the path
+    filename=$(basename "$file")
+    # Check if the file does not exist in the destination directory or is newer
+    if [ ! -e "$DEST_DIR/$file" ]; then
+      REM_AFTERUSE="$REM_AFTERUSE $DEST_DIR/$filename "
+      mv "$file" "$DEST_DIR/"
+    elif [ "$file" -nt "$DEST_DIR/$filename" ]; then
+      # Move the file to the destination directory
+      mv "$file" "$DEST_DIR/"
+    fi
+  done
+}
+
+# Add extra binaries to the PATH, if they are there.
+if [ "$(ls -1 "$TMPDIR"/bin | wc -l)" -gt 1 ]; then
+   xPATH="$TMPDIR/bin:$PATH"
+fi
+
 # Execute the binary with extracted libraries using LD_LIBRARY_PATH
-PREFIX="$TMPDIR" PATH="TMPDIR/bin:$PATH" LD_LIBRARY_PATH="$TMPDIR/libs" "$TMPDIR/bin/$EXE_NAME" "$@" || exit 1
+if [ "${USE_BULKLIBS:-0}" -eq 1 ]; then
+   mkdir -p "$LIBS_BULKDIR"
+   mv_u "$TMPDIR/libs" "$LIBS_BULKDIR"
+   PATH="$PATH:$xPATH" LD_LIBRARY_PATH="$LIBS_BULKDIR" PREFIX="$TMPDIR" "$TMPDIR/bin/$EXE_NAME" "$@" || exit 1
+else
+   PATH="$PATH:$xPATH" LD_LIBRARY_PATH="$TMPDIR/libs" PREFIX="$TMPDIR" "$TMPDIR/bin/$EXE_NAME" "$@" || exit 1
+fi
+
 exit $?
 __ARCHIVE_MARKER__
 SCRIPT
