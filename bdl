@@ -77,10 +77,10 @@ determine_fetcher() {
 
 fetch_binary() {
     PACKAGE_NAME="$1"
-    INSTALL_DIR="$2"
-    DESTINATION="${3:-$INSTALL_DIR/$PACKAGE_NAME}"
+    nINSTALL_DIR="$2"
+    DESTINATION="${3:-$nINSTALL_DIR/$PACKAGE_NAME}"
 
-    mkdir -p "$INSTALL_DIR"
+    mkdir -p "$nINSTALL_DIR"
     determine_fetcher
 
     SOURCE_URL=$(find_url "$PACKAGE_NAME")
