@@ -16,16 +16,17 @@
 > - When using -R do not suppply files ending in .bak, the script automatically detects them, if you want, you can do .bak.bak by using "baker <file>.bak", though I do not recommend you do that, it quickly becomes confusing. Keep in mind that -R does not switch places with <file> and <file>.bak, it moves <file>.bak to <file>.
 ---
 - [**bdl (Binary Downloader)**<img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/bash/bash-original.svg" width="30" height="30">](https://github.com/xplshn/Handyscripts/blob/main/ccat) **➼** Simple script that downloads `~ 1000` *statically linked*, *pre-built programs* to `.local/shared/bin` from : [Azathothas/Toolpacks](https://github.com/Azathothas/Toolpacks) `|` [Azathothas/Static-Binaries](https://github.com/Azathothas/Static-Binaries) `|` [Azathothas/static-toolbox](https://github.com/Azathothas/static-toolbox)
-> - It can Run(without installing), Install, Remove, List or give Info about programs.
+> - It can Run(without installing), Install, Remove, List or give Info about programs or Search them (Fuzzy search that matches agains descriptions and package names).
 > > ```bash
-> > ❯ Usage: bash {run|install|remove|search|info|list|tldr} <PACKAGE_NAME>
+> > ❯ Usage: bdl {run|install|remove|search|info|list|tldr} <PACKAGE_NAME>
 > > 
 > > curl -qfsSL "https://raw.githubusercontent.com/xplshn/Handyscripts/main/bdl" | bash -s -- {OPTIONS_HERE}
 > > #Example
 > > curl -qfsSL "https://raw.githubusercontent.com/xplshn/Handyscripts/main/bdl" | bash -s --  run neofetch
 > > ```
 > - The Run option runs programs from /tmp, it caches them to a file, so if you run a program with the flag run more than one time, the second time it will not have to download the program anymore, if more than 40+ programs are cached, the cache deletes the first 40+ programs. It uses TMPFS for this behavior. Please edit the script to your likings, the first part of it contains variables you can change.
-> - It is not POSIX, but it works under BASH and shells which support extended POSIX. If you know how to fix that, how to make it suck less, I'd be grateful if you'd make an issue or a PR.
+> - It is not POSIX, but it works under BASH and shells which support extended POSIX. If you know how to fix that, how to make it suck less, I'd be grateful if you'd make an issue or a PR. For now, in the first run it will bootstrap bash by grabbing the binary from the Buildbase repo and then on subsequent runs it will use bash. The syntax is POSIX but MIGHT rely on undefined behaviour (When running under SH).
+> - 406 lines long! # Could be smaller but has many features
 [![asciicast](https://asciinema.org/a/FzUYlDLumlbv3vYWjAa1BmYBx.svg)](https://asciinema.org/a/FzUYlDLumlbv3vYWjAa1BmYBx)
 ---
 - [**ccat (ColorCat)**<img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/bash/bash-original.svg" width="30" height="30">](https://github.com/xplshn/Handyscripts/blob/main/ccat) **➼** Wrapper for cat that uses source-highlight to highlight text whenever a deffinition file matches the content of the text. Really handy! I recommend doing an alias, since it behaves exactly like cat.
