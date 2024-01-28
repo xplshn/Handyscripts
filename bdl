@@ -176,7 +176,6 @@ run_from_cache() {
 
 install_binary() {
     PACKAGE_NAME="$1"
-    TEMP_DIR="/tmp" # Change this to your preferred installation directory
 
     # Check if the package name is empty
     if [ -z "$PACKAGE_NAME" ]; then
@@ -197,12 +196,12 @@ install_binary() {
         print_color "$GREEN" "Installing '$PACKAGE_NAME' from cache..."
         mv "$TEMP_DIR/$CACHED_LOCATION" "$INSTALL_DIR/$PACKAGE_NAME"
         clean_cache # Remove duplicates and non-existent files from the cache
-        return
+        return 1
+    else
+        # Fetch the binary if it's not found in the installation directory or cache
+        fetch_binary "$PACKAGE_NAME" "$INSTALL_DIR" && print_color "$GREEN" "OK: $INSTALL_DIR/$PACKAGE_NAME"
+        clean_cache # Remove duplicates and non-existent files from the cache
     fi
-
-    # Fetch the binary if it's not found in the installation directory or cache
-    fetch_binary "$PACKAGE_NAME" "$INSTALL_DIR" && print_color "$GREEN" "OK: $INSTALL_DIR/$PACKAGE_NAME"
-    clean_cache # Remove duplicates and non-existent files from the cache
 }
 
 # Function to remove an installed package
@@ -298,7 +297,7 @@ fSearch() {
   # Check if no matching packages found
   if [ -z "$SEARCH_RESULTS" ]; then
     printf "No matching packages found for '%s'.\n" "$SEARCH_TERM"
-    return 0
+    return 1
   fi
 
   # Determine the truncation length
