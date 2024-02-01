@@ -185,8 +185,12 @@ install_binary() {
 
     # Check if the binary is already installed in the INSTALL_DIR
     if [ -f "$INSTALL_DIR/$PACKAGE_NAME" ]; then
-        print_color "$YELLOW" "The requested binary is already at: $INSTALL_DIR/$PACKAGE_NAME. Will not perform an install."
-        return
+        print_color "$YELLOW" "The requested binary is already at: $INSTALL_DIR/$PACKAGE_NAME."
+        if command -v gum >/dev/null 2>&1; then
+            gum confirm "Do you want to continue?" || return
+        else
+            return
+        fi
     fi
 
     # Get the cached location of the package
@@ -298,13 +302,16 @@ fSearch() {
   if [ -z "$SEARCH_RESULTS" ]; then
     printf "No matching packages found for '%s'.\n" "$SEARCH_TERM"
     return 1
+  elif ! echo "$SEARCH_RESULTS" | grep -wq "$SEARCH_TERM"; then
+    printf "No matching packages found for '%s'.\n" "$SEARCH_TERM"
+    return 1
   fi
 
   # Determine the truncation length
   TRUNC_LENGTH=$(( $(tput cols 2>/dev/null || echo "80") - 3 ))
 
   # Check if the package binary exists in the INSTALL_DIR and print results with installation state indicators
-  printf '%s\n' "$SEARCH_RESULTS" | while IFS= read -r line; do
+  printf '%s\n' "$SEARCH_RESULTS" | grep -w "$SEARCH_TERM" | while IFS= read -r line; do # Take out the "grep -w" line if you want ACTUAL fuzzy search
     NAME=$(echo "$line" | awk -F ' - ' '{print $1}')
     DESCRIPTION=$(echo "$line" | awk -F ' - ' '{$1=""; print substr($0,2)}')
     CACHED_LOCATION=$(return_cached_file "$NAME")
@@ -316,9 +323,12 @@ fSearch() {
       PREFIX="[-]"
     fi
 
-    # Truncate the description if it exceeds the truncation length
-    if [ ${#DESCRIPTION} -gt "$TRUNC_LENGTH" ]; then
-      DESCRIPTION=$(printf '%s' "$DESCRIPTION" | cut -c 1-"$TRUNC_LENGTH")
+    # Calculate available space for description
+    AVAILABLE_SPACE=$((TRUNC_LENGTH - ${#PREFIX} - ${#NAME} - 4))  # 4 accounts for space around ' - '
+
+    # Truncate the description if it exceeds the available space
+    if [ ${#DESCRIPTION} -gt "$AVAILABLE_SPACE" ]; then
+      DESCRIPTION=$(printf '%s' "$DESCRIPTION" | cut -c 1-"$AVAILABLE_SPACE" | sed 's/[ ,]*$//;s/,$//') # Shrink to the maximum line size + Remove trailing spaces & commas.
       DESCRIPTION="${DESCRIPTION}..."
     fi
 
@@ -380,7 +390,7 @@ case $1 in
         run_from_cache "$2" "${@:3}"
         ;;
     install)
-        install_binary "$2" "$3"
+        install_binary "$2"
         ;;
     remove)
         remove_package "$2"
