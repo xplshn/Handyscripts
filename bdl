@@ -380,7 +380,7 @@ case $1 in
         run_from_cache "$2" "${@:3}"
         ;;
     install)
-        install_binary "$2"
+        install_binary "$2" "$3"
         ;;
     remove)
         remove_package "$2"
