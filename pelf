@@ -105,7 +105,20 @@ cat > "$dst" << 'SCRIPT'
 EXE_NAME=$(basename "$0" .blob)
 TMPDIR="/tmp/pelfbundle_$EXE_NAME$(date '+%s%M%S')_$RANDOM"
 LIBS_BULKDIR="/tmp/pelfbundle_libs-bulkdir"
-trap 'rm -rf "$TMPDIR" "$REM_AFTERUSE"' EXIT
+cleanup() {
+    # Delete individual files
+    for file in $REM_AFTERUSE; do
+        rm -f "$file"
+    done
+
+    # Delete the directory
+    rm -rf "$TMPDIR"
+}
+# Set up the trap
+trap cleanup EXIT
+###########################################################
+
+
 # Find the start position of the archive
 ARCHIVE_MARKER=$(awk '/^__ARCHIVE_MARKER__/ { print NR + 1; exit }' "$0")
 
