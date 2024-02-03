@@ -9,17 +9,10 @@ NC='\033[0m' # No Color
 
 # Directories, files, etc. NOTE: Not consistent. TODO: Enhance readability, simplify variables.
 INSTALL_DIR="${HOME}/.local/bin" # You may change this to whatever dir you want, make sure to add it to your PATH.
-TEMP_DIR="/tmp/bdl_cached"
+TEMP_DIR="${TMPDIR:-/tmp}/bdl_cached"
 CACHE_FILE="${TMPDIR:-${TEMP_DIR}}/bdl_install-less_bins_cached"
 METADATA_URL="https://raw.githubusercontent.com/metis-os/hysp-pkgs/main/data/metadata.json"
-
-# Check the machine architecture using uname -m and set SYSTEM_ARCH accordingly
-case $(uname -m) in
-    x86_64) SYSTEM_ARCH="x86_64_Linux" ;;
-    aarch64) SYSTEM_ARCH="aarch64_arm64_Linux" ;;
-    *) SYSTEM_ARCH="Unknown" ;;
-esac
-
+SYSTEM_ARCH="$(uname -m)"
 
 if [ -z "$BASH_VERSION" ]; then
     # Check if bash is available
@@ -57,7 +50,7 @@ spinner() {
                 printf "%s" "$char"
             fi
             sleep "$COOLSPINNER_DELAY"
-            printf "\b"
+            printf "\r"
             i=$((i + 1))
         done
     done
@@ -351,7 +344,7 @@ list_packages() {
             curl -qfsSL "https://bin.ajam.dev/$SYSTEM_ARCH/METADATA.json" && \
             curl -qfsSL "https://bin.ajam.dev/$SYSTEM_ARCH/Baseutils/METADATA.json" && \
             curl -qfsSL "https://api.github.com/repos/xplshn/Handyscripts/contents"
-        } | jq -r '.[].Name' | grep -v "\.7z\|BLAKE3SUM\|FILE\.txt\|METADATA.json\|README\.md\|SHA256SUM" | uniq | sort)
+        } | jq -r '.[].Name' | grep -v "\.7z$\|\.bz2$\|\.json$\|\.gz$\|\.md$\|\.txt$\|\.tar$\|\.zip$" | uniq | sort)
         
     kill "$spinner_pid" >/dev/null 2>&1
     printf "\033[2K\r%s\n" "$packages"
