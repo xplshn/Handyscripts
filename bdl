@@ -11,7 +11,7 @@ INSTALL_DIR="${HOME}/.local/bin" # You may change this to whatever dir you want,
 TEMP_DIR="${TMPDIR:-/tmp}/bdl_cached"
 CACHE_FILE="${TMPDIR:-${TEMP_DIR}}/bdl_install-less_bins_cached"
 METADATA_URL="https://raw.githubusercontent.com/metis-os/hysp-pkgs/main/data/metadata.json"
-SYSTEM_ARCH="$(uname -m)"
+SYSTEM_ARCH="$(uname -m)_Linux"
 if [ -z "$BASH_VERSION" ]; then
     PATH="$PATH:$TEMP_DIR/bdl_bootstrap"
     if command -v bash >/dev/null 2>&1; then
@@ -58,10 +58,8 @@ print_color() {
 determine_fetcher() {
     if command -v wget >/dev/null 2>&1; then
         FETCHER="wget"
-        FETCHER_TO_BOOTSTRAP="curl"
     elif command -v curl >/dev/null 2>&1; then
         FETCHER="curl"
-        FETCHER_TO_BOOTSTRAP="wget"
     else
         printf "Neither curl nor wget found. Cannot proceed with bootstrapping.\n"
         return 1
@@ -214,28 +212,28 @@ find_url() {
 
     if [ -n "$NO_METADATA" ]; then
         if [ -n "$BASE" ]; then
-            printf "https://bin.ajam.dev/$SYSTEM_ARCH/Baseutils/$PACKAGE_NAME\n" #printf "https://raw.githubusercontent.com/Azathothas/Static-Binaries/main/baseutils/$SYSTEM_ARCH/$PACKAGE_NAME\n"
+            echo "https://bin.ajam.dev/$SYSTEM_ARCH/Baseutils/$PACKAGE_NAME"
         else
-            printf "https://bin.ajam.dev/$SYSTEM_ARCH/$PACKAGE_NAME\n" #printf "https://raw.githubusercontent.com/Azathothas/Toolpacks/main/$SYSTEM_ARCH/$PACKAGE_NAME\n"
+            echo "https://bin.ajam.dev/$SYSTEM_ARCH/$PACKAGE_NAME"
         fi
         return
     fi
-
     SOURCE_URL=$(curl -s "$METADATA_URL" | jq -r --arg pname "$PACKAGE_NAME" --arg sysarch "$SYSTEM_ARCH" \
         '.packages[] | select(.name == $pname and .architecture == $sysarch) | .source')
-
-    # Check if source URL is empty -> Correct if so.
+    # Check if source URL is empty -> Find the URL manually if so. #NOTE:If the firt SOURCE_URL check works, it saves time, that's why we preffer extracting from metadata first and turning to "curl --fail" IFs/checks as a last resort
     if [ -z "$SOURCE_URL" ]; then
-        #LIST_PACKAGES_RESULT=$(list_packages | grep "^$PACKAGE_NAME$")
         SOURCE_URL="https://bin.ajam.dev/$SYSTEM_ARCH/$PACKAGE_NAME"
-            if ! curl --output /dev/null --silent --head --fail "$SOURCE_URL"; then
-                SOURCE_URL="https://bin.ajam.dev/$SYSTEM_ARCH/Baseutils/$PACKAGE_NAME"
-                if ! curl --output /dev/null --silent --head --fail "$SOURCE_URL"; then
-                    SOURCE_URL="https://raw.githubusercontent.com/xplshn/Handyscripts/master/$PACKAGE_NAME"
+        if ! curl --output /dev/null --silent --fail "$SOURCE_URL"; then
+            SOURCE_URL="https://bin.ajam.dev/$SYSTEM_ARCH/Baseutils/$PACKAGE_NAME"
+            if ! curl --output /dev/null --silent --fail "$SOURCE_URL"; then
+                SOURCE_URL="https://raw.githubusercontent.com/xplshn/Handyscripts/master/$PACKAGE_NAME"
+                if ! curl --output /dev/null --silent --fail "$SOURCE_URL"; then
+                    print_color "$YELLOW" "Source URL not found for '$PACKAGE_NAME'."
+                    return 1
                 fi
             fi
+        fi
     fi
-
     printf '%s\n' "$SOURCE_URL"
 }
 
@@ -245,26 +243,20 @@ show_package_info() {
 
     # Start spinner in the background & capture its PID.
     spinner & spinner_pid=$!
-
     PACKAGE_INFO=$(curl -s "$METADATA_URL" | jq --arg pname "$PACKAGE_NAME" --arg sysarch "$SYSTEM_ARCH" \
         '.packages[] | select(.name == $pname and .architecture == $sysarch) | {description, name, version, updated, size, sha, source}')
-
     if [ -z "$PACKAGE_INFO" ]; then
         # Kill the spinner if download fails
         kill "$spinner_pid" >/dev/null 2>&1
-
         # Clear the line
         printf "\033[2K\r"
-
         # Print error.
-        print_color "$YELLOW" "Package '$PACKAGE_NAME' not found."
+        print_color "$YELLOW" "Info for package '$PACKAGE_NAME' not found in the metadata.json file. Please contribute to $METADATA_URL."
     else
         # Kill the spinner if download succeeds
         kill "$spinner_pid" >/dev/null 2>&1
-
         # Clear the line
         printf "\033[2K\r"
-
         # SUCCESS: Print info in JSON.
         print_color "$GREEN" "$PACKAGE_INFO"
     fi
@@ -340,16 +332,16 @@ list_packages() {
 
 bootstrap() {
     mkdir -p "$TEMP_DIR/bdl_bootstrap"
-    export PATH="$TEMP_DIR/bdl_bootstrap:$PATH"
+    PATH="$TEMP_DIR/bdl_bootstrap:$PATH"
     if [ -n "$FETCHER" ]; then
         export NO_METADATA=1
         if ! command -v bash >/dev/null 2>&1; then
             print_color "${YELLOW}" "bash is not available. Bootstrapping..."
             BASE="true" fetch_binary "bash" "$TEMP_DIR/bdl_bootstrap"
         fi
-        if ! command -v "$FETCHER_TO_BOOTSTRAP" >/dev/null 2>&1; then
-            print_color "${YELLOW}" "$FETCHER_TO_BOOTSTRAP is not installed. Bootstrapping..."
-            fetch_binary "$FETCHER_TO_BOOTSTRAP" "$TEMP_DIR/bdl_bootstrap"
+        if ! command -v curl >/dev/null 2>&1; then
+            print_color "${YELLOW}" "curl is not installed. Bootstrapping..."
+            fetch_binary curl "$TEMP_DIR/bdl_bootstrap"
         fi
         if ! command -v jq >/dev/null 2>&1; then
             print_color "${YELLOW}" "jq is not installed. Bootstrapping..."
@@ -386,6 +378,9 @@ case $1 in
         ;;
     list)
         list_packages
+        ;;
+    find_url)
+        find_url "$2"
         ;;
     tldr)
         run_from_cache tlrc "${@:2}" # Official TL;DR pages client written in Rust.
