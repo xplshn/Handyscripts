@@ -1,8 +1,7 @@
 #!/bin/sh
 # NOT POSIX, AT ALL. TODO: Make this not suck. Create a bash fork that does not have any of the BASH exclusive "features" and is 100% POSIX and ISO C.
 # UPDATE: POSIX syntax. Still relies on undefined behaviour/BASHisms/features the GNU might have accidentally implemented in their attempt to rework Thompson Shell.
-
-# ANSI color codes
+# If you install "Gum" (https://github.com/charmbracelet/gum) you will get some TUI fanciness.
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
@@ -13,9 +12,7 @@ TEMP_DIR="${TMPDIR:-/tmp}/bdl_cached"
 CACHE_FILE="${TMPDIR:-${TEMP_DIR}}/bdl_install-less_bins_cached"
 METADATA_URL="https://raw.githubusercontent.com/metis-os/hysp-pkgs/main/data/metadata.json"
 SYSTEM_ARCH="$(uname -m)"
-
 if [ -z "$BASH_VERSION" ]; then
-    # Check if bash is available
     PATH="$PATH:$TEMP_DIR/bdl_bootstrap"
     if command -v bash >/dev/null 2>&1; then
         exec bash "$0" "$@"
@@ -28,18 +25,14 @@ spinner() {
     if [ -z "$COOLSPINNER" ]; then
         COOLSPINNER='|/-\\'
     fi
-
     if [ -z "$COOLSPINNER_COLOR" ]; then
         COOLSPINNER_COLOR='\033[0m'
     fi
-
     if [ -z "$COOLSPINNER_DELAY" ]; then
         COOLSPINNER_DELAY=0.1
     fi
-
     len=$(printf "%s" "$COOLSPINNER" | wc -c | awk '{print $1}')
     trap 'printf "\033[?25h"; exit' INT
-
     while true; do
         i=1
         while [ "$i" -le "$len" ]; do
@@ -79,20 +72,15 @@ fetch_binary() {
     PACKAGE_NAME="$1"
     nINSTALL_DIR="$2"
     DESTINATION="${3:-$nINSTALL_DIR/$PACKAGE_NAME}"
-
     mkdir -p "$nINSTALL_DIR"
     determine_fetcher
-
     SOURCE_URL=$(find_url "$PACKAGE_NAME")
-
     if [ -z "$SOURCE_URL" ]; then
         print_color "$YELLOW" "Source URL not found for '$PACKAGE_NAME'."
         return 1
     fi
-
     COOLSPINNER_COLOR='\033[92m'
     spinner & spinner_pid=$!
-
     if [ "$FETCHER" = "curl" ]; then
         if ! "$FETCHER" -o "$DESTINATION" "$SOURCE_URL" >/dev/null 2>&1; then
             kill "$spinner_pid" >/dev/null 2>&1  # Stop the spinner
@@ -355,37 +343,31 @@ bootstrap() {
     export PATH="$TEMP_DIR/bdl_bootstrap:$PATH"
     if [ -n "$FETCHER" ]; then
         export NO_METADATA=1
-
         if ! command -v bash >/dev/null 2>&1; then
             print_color "${YELLOW}" "bash is not available. Bootstrapping..."
             BASE="true" fetch_binary "bash" "$TEMP_DIR/bdl_bootstrap"
         fi
-
         if ! command -v "$FETCHER_TO_BOOTSTRAP" >/dev/null 2>&1; then
             print_color "${YELLOW}" "$FETCHER_TO_BOOTSTRAP is not installed. Bootstrapping..."
             fetch_binary "$FETCHER_TO_BOOTSTRAP" "$TEMP_DIR/bdl_bootstrap"
         fi
-
         if ! command -v jq >/dev/null 2>&1; then
             print_color "${YELLOW}" "jq is not installed. Bootstrapping..."
             fetch_binary "jq" "$TEMP_DIR/bdl_bootstrap"
         fi
-
         if ! command -v awk >/dev/null 2>&1; then
             print_color "${YELLOW}" "awk is not installed. Bootstrapping..."
             BASE="true" fetch_binary "awk" "$TEMP_DIR/bdl_bootstrap"
         fi
-
         if ! command -v tput >/dev/null 2>&1; then
             print_color "${YELLOW}" "tput is not available (from the netcurses package). Bootstrapping..."
             BASE="true" fetch_binary "tput" "$TEMP_DIR/bdl_bootstrap"
         fi
-
         unset NO_METADATA
     fi
 }
 
-determine_fetcher && bootstrap &&
+determine_fetcher && bootstrap && \
 case $1 in
     run)
         run_from_cache "$2" "${@:3}"
