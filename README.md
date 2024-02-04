@@ -49,7 +49,7 @@
 > /usr/bin/cargo
 > ```
 - [**pelf**<img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/bash/bash-original.svg" width="30" height="30">](https://github.com/xplshn/Handyscripts/blob/main/pelf) **➼** PELF or rather, portable elf is a utility that creates a bundle of a dynamic binary, it takes a binary and budles its dependencies into a single, executable file.
-> - It needs tar, base64, tail and other commands. It might use non POSIX features from the coreutils.
+> - It needs tar, base64, tail and other commands. It is POSIX2008 compatible. It has proven to work on Alpine and .blobs generated across other systems work too (There might be some exceptions due to ABI differences.).
 > ```sh
 > $ pelf $(which chocolate-doom) ./chocolate-doom.blob # The name can not be set arbitrarily.
 > $ ./chocolate-doom.blob
