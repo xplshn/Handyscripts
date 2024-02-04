@@ -106,9 +106,11 @@ EXE_NAME=$(basename "$0" .blob)
 TMPDIR="/tmp/pelfbundle_$EXE_NAME$(date '+%s%M%S')_$RANDOM"
 LIBS_BULKDIR="/tmp/pelfbundle_libs-bulkdir"
 cleanup() {
-    # Delete individual files
+    # Delete individual files only if they are used exclusively by the current process
     for file in $REM_AFTERUSE; do
-        rm -f "$file"
+        if [ -z "$(fuser "$file" 2>/dev/null | grep "$EXE_NAME_PID")" ]; then
+            rm "$file"
+        fi
     done
 
     # Delete the directory
@@ -181,16 +183,21 @@ mv_u() {
 
 # Add extra binaries to the PATH, if they are there.
 if [ "$(ls -1 "$TMPDIR"/bin | wc -l)" -gt 1 ]; then
+   export "${EXE_NAME}_bindir"="$TMPDIR/bin"
+   export "${EXE_NAME}_libs"="$TMPDIR/libs"
    xPATH="$TMPDIR/bin:$PATH"
+   USE_BULKLIBS=0
 fi
 
 # Execute the binary with extracted libraries using LD_LIBRARY_PATH
 if [ "${USE_BULKLIBS:-0}" -eq 1 ]; then
    mkdir -p "$LIBS_BULKDIR"
    mv_u "$TMPDIR/libs" "$LIBS_BULKDIR"
-   PATH="$PATH:$xPATH" LD_LIBRARY_PATH="$LIBS_BULKDIR" PREFIX="$TMPDIR" "$TMPDIR/bin/$EXE_NAME" "$@" || exit 1
+   PATH="xPATH:$PATH" LD_LIBRARY_PATH="$LIBS_BULKDIR" PREFIX="$TMPDIR" "$TMPDIR/bin/$EXE_NAME" "$@" || exit 1
+   EXE_NAME_PID="$!"
 else
-   PATH="$PATH:$xPATH" LD_LIBRARY_PATH="$TMPDIR/libs" PREFIX="$TMPDIR" "$TMPDIR/bin/$EXE_NAME" "$@" || exit 1
+   PATH="$xPATH:$PATH" LD_LIBRARY_PATH="$TMPDIR/libs" PREFIX="$TMPDIR" "$TMPDIR/bin/$EXE_NAME" "$@" || exit 1
+   EXE_NAME_PID="$!"
 fi
 
 exit $?
