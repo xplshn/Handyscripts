@@ -26,7 +26,7 @@
 > > ```
 > - The Run option runs programs from /tmp, it caches them to a file, so if you run a program with the flag run more than one time, the second time it will not have to download the program anymore, if more than 40+ programs are cached, the cache deletes the first 40+ programs. It uses TMPFS for this behavior. Please edit the script to your likings, the first part of it contains variables you can change.
 > - It is not POSIX, but it works under BASH and shells which support extended POSIX. If you know how to fix that, how to make it suck less, I'd be grateful if you'd make an issue or a PR. For now, in the first run it will bootstrap bash by grabbing the binary from the Buildbase repo and then on subsequent runs it will use bash. The syntax is POSIX but MIGHT rely on undefined behaviour (When running under SH).
-> - Implemented in 399 lines (352 loc)! # Could be smaller but has many features
+> - Implemented in 358LOC! # Could be smaller but has many features
 [![asciicast](https://asciinema.org/a/FzUYlDLumlbv3vYWjAa1BmYBx.svg)](https://asciinema.org/a/FzUYlDLumlbv3vYWjAa1BmYBx)
 ---
 - [**ccat (ColorCat)**<img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/bash/bash-original.svg" width="30" height="30">](https://github.com/xplshn/Handyscripts/blob/main/ccat) **➼** Wrapper for cat that uses source-highlight to highlight text whenever a deffinition file matches the content of the text. Really handy! I recommend doing an alias, since it behaves exactly like cat.
