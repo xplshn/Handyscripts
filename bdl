@@ -13,12 +13,14 @@ CACHE_FILE="${TMPDIR:-${TEMP_DIR}}/bdl_install-less_bins_cached"
 METADATA_URL="https://raw.githubusercontent.com/metis-os/hysp-pkgs/main/data/metadata.json"
 SYSTEM_ARCH="$(uname -m)_Linux"
 if [ -z "$BASH_VERSION" ]; then
+    xPATH="$PATH"
     PATH="$PATH:$TEMP_DIR/bdl_bootstrap"
     if command -v bash >/dev/null 2>&1; then
         exec bash "$0" "$@"
     else
         echo "Running under SH, some features might not work(run), unless bash is installed or bootstrapped, there will be undefined behaviour."
     fi
+    PATH="$xPATH"
 fi
 
 spinner() {
