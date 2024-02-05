@@ -287,7 +287,7 @@ fSearch() {
   elif [ "$(echo "$SEARCH_RESULTS" | wc -l)" -gt 10 ]; then # Maximum results length
       printf "Too many matching packages found for '%s'.\n" "$SEARCH_TERM"
       return 1
-  elif echo "$SEARCH_RESULTS" | grep -w "$SEARCH_TERM" > /dev/null; then
+  elif ! echo "$SEARCH_RESULTS" | grep -w "$SEARCH_TERM" > /dev/null; then
       printf "No matching packages found for '%s'.\n" "$SEARCH_TERM"
       return 1
   fi 
