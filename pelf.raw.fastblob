@@ -93,7 +93,7 @@ done
 cp -L "$src" "$tmp_dir/bin" || exit 1
 
 # Create a tar archive of the executable, libraries and additional files.
-if ! tar czf "$tmp_dir/archive.tar.gz" -C "$tmp_dir" .; then
+if ! tar cf "$tmp_dir/archive.tar" -C "$tmp_dir" . && pigz --best --verbose "$tmp_dir/archive.tar" ; then
     echo "Extraction failed" >&2
     exit 1
 fi
@@ -124,8 +124,8 @@ trap cleanup EXIT
 # Find the start position of the archive
 ARCHIVE_MARKER=$(awk '/^__ARCHIVE_MARKER__/ { print NR + 1; exit }' "$0")
 
-# Decode the base64-encoded archive and extract it
-mkdir -p "$TMPDIR" && tail -n +$ARCHIVE_MARKER "$0" | base64 -d | tar xz -C "$TMPDIR" || {
+# Decode the archive and extract it
+mkdir -p "$TMPDIR" && tail -n +$ARCHIVE_MARKER "$0" | pigz --decompress --keep | tar xf - -C "$TMPDIR" || {
     echo "Extraction failed" >&2
     exit 1
 }
@@ -193,10 +193,10 @@ fi
 if [ "${USE_BULKLIBS:-0}" -eq 1 ]; then
    mkdir -p "$LIBS_BULKDIR"
    mv_u "$TMPDIR/libs" "$LIBS_BULKDIR"
-   PATH="xPATH:$PATH" LD_LIBRARY_PATH="$LIBS_BULKDIR" PREFIX="$TMPDIR" "$TMPDIR/bin/$EXE_NAME" "$@" || exit 1
+   PATH="xPATH:$PATH" LD_LIBRARY_PATH="$LIBS_BULKDIR" PREFIX="$TMPDIR" "$TMPDIR/libs/chromium/chromium" "$@" || exit 1
    EXE_NAME_PID="$!"
 else
-   PATH="$xPATH:$PATH" LD_LIBRARY_PATH="$TMPDIR/libs" PREFIX="$TMPDIR" "$TMPDIR/bin/$EXE_NAME" "$@" || exit 1
+   PATH="$xPATH:$PATH" LD_LIBRARY_PATH="$TMPDIR/libs" PREFIX="$TMPDIR" "$TMPDIR/libs/chromium/chromium" "$@" || exit 1
    EXE_NAME_PID="$!"
 fi
 
@@ -204,8 +204,8 @@ exit $?
 __ARCHIVE_MARKER__
 SCRIPT
 
-# Append the base64-encoded archive to the self-extracting script
-base64 "$tmp_dir/archive.tar.gz" >> "$dst" || exit 1
+# Append the archive to the self-extracting script
+cat "$tmp_dir/archive.tar.gz" >> "$dst" || exit 1
 
 # Make the self-extracting script executable
 chmod +x "$dst" || exit 1

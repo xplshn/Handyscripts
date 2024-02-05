@@ -124,7 +124,7 @@ trap cleanup EXIT
 # Find the start position of the archive
 ARCHIVE_MARKER=$(awk '/^__ARCHIVE_MARKER__/ { print NR + 1; exit }' "$0")
 
-# Decode the base64-encoded archive and extract it
+# Decode the archive and extract it
 mkdir -p "$TMPDIR" && tail -n +$ARCHIVE_MARKER "$0" | tar xz -C "$TMPDIR" || {
     echo "Extraction failed" >&2
     exit 1
@@ -132,7 +132,7 @@ mkdir -p "$TMPDIR" && tail -n +$ARCHIVE_MARKER "$0" | tar xz -C "$TMPDIR" || {
 
 # Function to check if a library is found in system paths
 is_library_in_system() {
-    local library=$1
+    library=$1
     if [ -e "/usr/lib/$library" ] || [ -e "/lib/$library" ] || [ -e "/lib64/$library" ]; then
         return 0 # Library found in system
     else
@@ -174,7 +174,7 @@ mv_u() {
     if [ ! -e "$DEST_DIR/$file" ]; then
       REM_AFTERUSE="$REM_AFTERUSE $DEST_DIR/$filename "
       mv "$file" "$DEST_DIR/"
-    elif [ "$file" -nt "$DEST_DIR/$filename" ]; then
+    elif [ "$(find "$file" -newer "$DEST_DIR/$filename" 2>/dev/null)" ]; then
       # Move the file to the destination directory
       mv "$file" "$DEST_DIR/"
     fi
@@ -204,7 +204,7 @@ exit $?
 __ARCHIVE_MARKER__
 SCRIPT
 
-# Append the base64-encoded archive to the self-extracting script
+# Append the archive to the self-extracting script
 cat "$tmp_dir/archive.tar.gz" >> "$dst" || exit 1
 
 # Make the self-extracting script executable

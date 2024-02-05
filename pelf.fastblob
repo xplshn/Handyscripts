@@ -93,7 +93,7 @@ done
 cp -L "$src" "$tmp_dir/bin" || exit 1
 
 # Create a tar archive of the executable, libraries and additional files.
-if ! tar czf "$tmp_dir/archive.tar.gz" -C "$tmp_dir" .; then
+if ! tar cf "$tmp_dir/archive.tar" -C "$tmp_dir" . && pigz --best --verbose "$tmp_dir/archive.tar" ; then
     echo "Extraction failed" >&2
     exit 1
 fi
@@ -102,7 +102,7 @@ fi
 cat > "$dst" << 'SCRIPT'
 #!/bin/sh
 # Get the binary's name
-EXE_NAME=$(basename "$0" .blob)
+EXE_NAME=$(basename "$0" .fastblob)
 TMPDIR="/tmp/pelfbundle_$EXE_NAME$(date '+%s%M%S')_$RANDOM"
 LIBS_BULKDIR="/tmp/pelfbundle_libs-bulkdir"
 cleanup() {
@@ -124,8 +124,8 @@ trap cleanup EXIT
 # Find the start position of the archive
 ARCHIVE_MARKER=$(awk '/^__ARCHIVE_MARKER__/ { print NR + 1; exit }' "$0")
 
-# Decode the base64-encoded archive and extract it
-mkdir -p "$TMPDIR" && tail -n +$ARCHIVE_MARKER "$0" | base64 -d | tar xz -C "$TMPDIR" || {
+# Decode the archive and extract it
+mkdir -p "$TMPDIR" && tail -n +$ARCHIVE_MARKER "$0" | pigz --decompress --keep | tar xf - -C "$TMPDIR" || {
     echo "Extraction failed" >&2
     exit 1
 }
