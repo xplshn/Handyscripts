@@ -1,6 +1,10 @@
 #!/bin/sh
+# NOTE: Use a compliant ascii85 binary (https://github.com/xplshn/m_ascii85) # The generated bins will, however, not be compliant with the ascii85 format. (use of delimiters)
 
-# IDGAFPL License
+# shellcheck disable=SC2034
+# shellcheck disable=SC3028
+
+# IDGAFPL License: \
 LICENSE="\
 (C) 2016 My2ndAngelic. (Author of the LICENSE)
 
@@ -101,6 +105,7 @@ fi
 # Create a self-extracting script
 cat > "$dst" << 'SCRIPT'
 #!/bin/sh
+# NOTE: Use a compatible ascii85 binary (https://github.com/xplshn/m_ascii85) # Otherwise; Make sure that it has support for delimiters... (which is not part of the standard ascii85 'format')
 # Get the binary's name
 EXE_NAME=$(basename "$0" .ascii85.blob)
 TMPDIR="/tmp/pelfbundle_$EXE_NAME$(date '+%s%M%S')_$RANDOM"
