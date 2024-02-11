@@ -329,7 +329,7 @@ list_packages() {
             curl -qfsSL "https://bin.ajam.dev/$SYSTEM_ARCH/METADATA.json" && \
             curl -qfsSL "https://bin.ajam.dev/$SYSTEM_ARCH/Baseutils/METADATA.json" && \
             curl -qfsSL "https://api.github.com/repos/xplshn/Handyscripts/contents"
-        } | jq -r '.[] | (.Name // .name)' | grep -v "\.7z$\|\.bz2$\|\.json$\|\.gz$\|\.md$\|\.txt$\|\.tar$\|\.zip$" | sort -u)
+        } | jq -r '.[] | (.Name // .name)' | grep -v "\.7z$\|\.bz2$\|\.json$\|\.gz$\|\.md$\|\.txt$\|\.tar$\|\.zip$\|\_dir$" | sort -u)
         
     kill "$spinner_pid" >/dev/null 2>&1
     printf "\033[2K\r%s\n" "$packages"
