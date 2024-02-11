@@ -225,11 +225,11 @@ find_url() {
     # Check if source URL is empty -> Find the URL manually if so. #NOTE:If the firt SOURCE_URL check works, it saves time, that's why we preffer extracting from metadata first and turning to "curl --fail" IFs/checks as a last resort
     if [ -z "$SOURCE_URL" ]; then
         SOURCE_URL="https://bin.ajam.dev/$SYSTEM_ARCH/$PACKAGE_NAME"
-        if ! curl --output /dev/null --silent --fail "$SOURCE_URL"; then
+        if ! curl --location --output /dev/null --silent --fail "$SOURCE_URL"; then
             SOURCE_URL="https://bin.ajam.dev/$SYSTEM_ARCH/Baseutils/$PACKAGE_NAME"
-            if ! curl --output /dev/null --silent --fail "$SOURCE_URL"; then
+            if ! curl --location --output /dev/null --silent --fail "$SOURCE_URL"; then
                 SOURCE_URL="https://raw.githubusercontent.com/xplshn/Handyscripts/master/$PACKAGE_NAME"
-                if ! curl --output /dev/null --silent --fail "$SOURCE_URL"; then
+                if ! curl --location --output /dev/null --silent --fail "$SOURCE_URL"; then
                     print_color "$YELLOW" "Source URL not found for '$PACKAGE_NAME'."
                     return 1
                 fi
