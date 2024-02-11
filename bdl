@@ -72,6 +72,12 @@ fetch_binary() {
     PACKAGE_NAME="$1"
     nINSTALL_DIR="$2"
     DESTINATION="${3:-$nINSTALL_DIR/$PACKAGE_NAME}"
+    
+    # Check if PACKAGE_NAME contains slashes indicating it's a path
+    if [[ "$PACKAGE_NAME" == *"/"* ]]; then
+        mkdir -p "$(dirname "$DESTINATION")"
+    fi
+
     mkdir -p "$nINSTALL_DIR"
     determine_fetcher
     SOURCE_URL=$(find_url "$PACKAGE_NAME")
@@ -211,7 +217,6 @@ remove_package() {
 # Function to retrieve package source URL
 find_url() {
     PACKAGE_NAME="$1"
-
     if [ -n "$NO_METADATA" ]; then
         if [ -n "$BASE" ]; then
             echo "https://bin.ajam.dev/$SYSTEM_ARCH/Baseutils/$PACKAGE_NAME"
