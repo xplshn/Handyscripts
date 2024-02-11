@@ -183,8 +183,8 @@ mv_u() {
 
 # Add extra binaries to the PATH, if they are there.
 if [ "$(ls -1 "$TMPDIR"/bin | wc -l)" -gt 1 ]; then
-   export "${EXE_NAME}_bindir"="$TMPDIR/bin"
-   export "${EXE_NAME}_libs"="$TMPDIR/libs"
+   export "$(echo "$EXE_NAME" | sed 's/-//g')_bindir"="$TMPDIR/bin"
+   export "$(echo "$EXE_NAME" | sed 's/-//g')_libs"="$TMPDIR/libs"
    xPATH="$TMPDIR/bin:$PATH"
    USE_BULKLIBS=0
 fi
@@ -205,7 +205,7 @@ __ARCHIVE_MARKER__
 SCRIPT
 
 # Append the ascii85-encoded archive to the self-extracting script
-ascii85 "$tmp_dir/archive.tar.gz" >> "$dst" || exit 1
+cat "$tmp_dir/archive.tar.gz" | ascii85 >> "$dst" || exit 1
 
 # Make the self-extracting script executable
 chmod +x "$dst" || exit 1

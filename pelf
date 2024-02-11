@@ -103,7 +103,7 @@ cat > "$dst" << 'SCRIPT'
 #!/bin/sh
 # Get the binary's name
 EXE_NAME=$(basename "$0" .blob)
-TMPDIR="/tmp/pelfbundle_$EXE_NAME$(date '+%s%M%S')_$RANDOM"
+TMPDIR="/tmp/.pelfbundles/pbundle_$EXE_NAME$(date '+%s%M%S')_$RANDOM"
 LIBS_BULKDIR="/tmp/pelfbundle_libs-bulkdir"
 cleanup() {
     # Delete individual files only if they are used exclusively by the current process
@@ -183,8 +183,8 @@ mv_u() {
 
 # Add extra binaries to the PATH, if they are there.
 if [ "$(ls -1 "$TMPDIR"/bin | wc -l)" -gt 1 ]; then
-   export "${EXE_NAME}_bindir"="$TMPDIR/bin"
-   export "${EXE_NAME}_libs"="$TMPDIR/libs"
+   export "$(echo "$EXE_NAME" | sed 's/-//g')_bindir"="$TMPDIR/bin"
+   export "$(echo "$EXE_NAME" | sed 's/-//g')_libs"="$TMPDIR/libs"
    xPATH="$TMPDIR/bin:$PATH"
    USE_BULKLIBS=0
 fi
