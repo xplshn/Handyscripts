@@ -104,8 +104,10 @@ fi
 # Create a self-extracting script
 cat > "$dst" << 'SCRIPT'
 #!/bin/sh
+# WARNING. THIS FILE WAS GENERATED USING PELF.RAW. YOU WILL NOT BE ABLE TO MODIFY THIS FILE, AND IF YOU DO, THE CONTENTS WILL BE DAMAGED/CORRUPTED.
+# UNLESS YOU USE A PROPER EDITOR CHANCES ARE YOU WILL HAVE TO RECONSTRUCT THIS FILE USING PELF.raw AGAIN. FOR A MORE RELIABLE yet SLOWER AND 37%~ LARGER ARCHIVE USE THE NORMAL PELF SCRIPT.
 # Get the binary's name
-EXE_NAME=$(basename "$0" .blob)
+EXE_NAME="${EXE_NAME:-$(basename "$0" .raw.blob)}" # In case you need to access a different program packed alongside the "main" one, just prepend the call to this binary with the correct EXE_NAME. Or make a wrapper that you then pack along the real binaries.
 TMPDIR="/tmp/.pelfbundles/pbundle_$EXE_NAME$(date '+%s%M%S')_$RANDOM"
 LIBS_BULKDIR="/tmp/pelfbundle_libs-bulkdir"
 cleanup() {
@@ -127,8 +129,8 @@ trap cleanup EXIT
 # Find the start position of the archive
 ARCHIVE_MARKER=$(awk '/^__ARCHIVE_MARKER__/ { print NR + 1; exit }' "$0")
 
-# Decode the base64-encoded archive and extract it
-mkdir -p "$TMPDIR" && tail -n +$ARCHIVE_MARKER "$0" | base64 -d | tar xz -C "$TMPDIR" || {
+# Extract the archive
+mkdir -p "$TMPDIR" && tail -n +$ARCHIVE_MARKER "$0" | tar xz -C "$TMPDIR" || {
     echo "Extraction failed" >&2
     exit 1
 }
@@ -207,8 +209,8 @@ exit $?
 __ARCHIVE_MARKER__
 SCRIPT
 
-# Append the base64-encoded archive to the self-extracting script
-base64 "$tmp_dir/archive.tar.gz" >> "$dst" || exit 1
+# Append the archive to the self-extracting script
+cat "$tmp_dir/archive.tar.gz" >> "$dst" || exit 1
 
 # Make the self-extracting script executable
 chmod +x "$dst" || exit 1
