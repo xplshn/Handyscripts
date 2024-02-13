@@ -9,8 +9,8 @@
 #### These should work on most POSIX systems. I try to minimize dependency on sucky software like that made by the FSF/GNU. If these script are not suckless, or do not work with any POSIX compatible system, please let me know, also, if you make changes, I'd be grateful if you made a PR.
 ---
 - #### Setup & Config
-> 1. **Clone** to `/usr/local/bin` and add to `$PATH`
-> 2. Set executable bit with `chmod +x` if necessary.
+> 1. **Clone** to `/usr/local/bin` and OR/AND any place in your `$PATH`
+> 2. Set executable bit with `chmod +x`.
 ---
 - [**Baker**<img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/bash/bash-original.svg" width="30" height="30">](https://github.com/xplshn/Handyscripts/blob/main/baker) **➼** Rreceives a file as an argument and copies it to `<file>.bak`, when invoked with `-R` it moves `<file>.bak` to `<file>`.
 > - When using -R do not suppply files ending in .bak, the script automatically detects them, if you want, you can do .bak.bak by using "baker <file>.bak", though I do not recommend you do that, it quickly becomes confusing. Keep in mind that -R does not switch places with <file> and <file>.bak, it moves <file>.bak to <file>.
