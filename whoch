@@ -1,10 +1,5 @@
 #!/bin/sh
 
-# Function to display usage
-show_usage() {
-    echo "Usage: $(basename "$0") <command>" >&2
-}
-
 # Function to validate the command
 validate_command() {
     case $1 in
@@ -15,8 +10,8 @@ validate_command() {
 
 # Function to search for the command in PATH
 search_command_in_path() {
-    local command_to_find="$1"
-    local found=false
+    command_to_find="$1"
+    found=false
 
     IFS=:
     for dir in $PATH; do
@@ -34,11 +29,6 @@ search_command_in_path() {
 
 # Main function
 main() {
-    if [ $# -ne 1 ] || [ -z "$1" ]; then
-        show_usage
-        exit 1
-    fi
-
     if ! validate_command "$1"; then
         echo "Invalid command format. Please provide an alphanumeric command name only." >&2
         exit 1
@@ -48,4 +38,14 @@ main() {
 }
 
 # Execute main function with arguments
-main "$@"
+case "$1" in
+    "-a")
+        main "$2" | awk '!seen[$0]++'
+        ;;
+    "--aa")
+        main "$2"
+        ;;
+    *)
+        main "$@" | head -n 1
+        ;;
+esac
