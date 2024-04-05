@@ -144,28 +144,31 @@ set_tmpdir_from_env() {
     # Construct the variable name by appending _bindir to $rEXENAME
     var_name="${rEXE_NAME}_bindir"
 
-    # Use eval to check if the constructed variable name exists and is not empty
-    eval "if [ -n \"\${$var_name}\" ]; then"
-        # Use eval again to set TMPDIR to the directory name of the constructed variable
-        eval "TMPDIR=\"$(dirname \"\${$var_name}\")\""
-        found_runningInstance=1
-        return
-    eval "fi"
-}
-
-set_tmpdir_from_env() {
-    # Construct the variable name by appending _bindir to $rEXENAME
-    var_name="${rEXE_NAME}_bindir"
-
-    # Use eval to check if the constructed variable name exists and is not empty
-    eval "var_value=\"\${$var_name}\""
-    if [ -n "$var_value" ]; then
-        # Correctly set TMPDIR to the directory containing the variable's value
+    # Check if the constructed variable name exists and is not empty
+    eval "var_value=\${$var_name}"
+    if [ -d "$var_value" ]; then
+        # Set TMPDIR to the directory name of the constructed variable
         TMPDIR="$(dirname "$var_value")"
         found_runningInstance=1
         return
     fi
 }
+
+set_tmpdir_from_env
+if [ -z "$found_runningInstance" ] || [ "$found_runningInstance" != "1" ]; then
+        # Find the start position of the archive
+        ARCHIVE_MARKER=$(awk '/^__ARCHIVE_MARKER__/ { print NR + 1; exit }' "$0")
+
+            # Construct the variable name by appending _bindir to $rEXENAME
+        var_name="${rEXE_NAME}_bindir"
+        # Decode the base64-encoded archive and extract it
+        mkdir -p "$TMPDIR" && tail -n +$ARCHIVE_MARKER "$0" | base64 -d | tar xz -C "$TMPDIR" || {
+            # Use eval to check if the constructed variable name exists and is not empty
+            echo "Extraction failed" >&2
+            eval "var_value=\"\${$var_name}\""
+            exit 1
+        }
+fi
 
 # Function to check if a library is found in system paths
 is_library_in_system() {
@@ -230,7 +233,7 @@ fi
 
 # Figure out what we do
 binDest="$TMPDIR/bin/$EXE_NAME"
-if [ "$1" = "--link" ] || [ "$1" = "-lex" ]; then
+if [ "$1" = "--pbundle_link" ]; then
     binDest="$2"
     shift 2
 fi
