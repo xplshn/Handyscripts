@@ -105,32 +105,66 @@ fi
 cat > "$dst" << 'SCRIPT'
 #!/bin/sh
 # Get the binary's name
-EXE_NAME=$(basename "$0" .blob)
-TMPDIR="/tmp/.pelfbundles/pbundle_$EXE_NAME$(date '+%s%M%S')_$RANDOM"
+rEXE_NAME="$(basename "$0" .blob)"
+[ -n "$EXE_NAME" ] || EXE_NAME="$rEXE_NAME"
+TMPDIR="/tmp/.pelfbundles/pbundle_$rEXE_NAME$(date '+%s%M%S')_$RANDOM"
 LIBS_BULKDIR="/tmp/pelfbundle_libs-bulkdir"
 cleanup() {
-    # Delete individual files only if they are used exclusively by the current process
-    for file in $REM_AFTERUSE; do
-        if [ -z "$(fuser "$file" 2>/dev/null | grep "$EXE_NAME_PID")" ]; then
-            rm "$file"
-        fi
-    done
+    if [ -z "$found_runningInstance" ] || [ "$found_runningInstance" != "1" ]; then
+        # Delete individual files only if they are used exclusively by the current process
+        for file in $REM_AFTERUSE; do
+            if [ -z "$(fuser "$file" 2>/dev/null | grep "$EXE_NAME_PID")" ]; then
+                rm "$file"
+            fi
+        done
 
-    # Delete the directory
-    rm -rf "$TMPDIR"
+        # Delete the directory
+        rm -rf "$TMPDIR"
+    fi
 }
 # Set up the trap
 trap cleanup EXIT
 ###########################################################
 
+# BASH version
+#set_tmpdir_from_env() {
+#    # Construct the variable name by appending _bindir to $rEXENAME
+#    var_name="${rEXE_NAME}_bindir"
+#
+#    # Check if the constructed variable name exists and is not empty
+#    if [ -n "${!var_name}" ]; then
+#        # Set TMPDIR to the directory name of the constructed variable
+#        TMPDIR="$(dirname "${!var_name}")"
+#        found_runningInstance=1
+#        return
+#    fi
+#}
 
-# Find the start position of the archive
-ARCHIVE_MARKER=$(awk '/^__ARCHIVE_MARKER__/ { print NR + 1; exit }' "$0")
+set_tmpdir_from_env() {
+    # Construct the variable name by appending _bindir to $rEXENAME
+    var_name="${rEXE_NAME}_bindir"
 
-# Decode the base64-encoded archive and extract it
-mkdir -p "$TMPDIR" && tail -n +$ARCHIVE_MARKER "$0" | base64 -d | tar xz -C "$TMPDIR" || {
-    echo "Extraction failed" >&2
-    exit 1
+    # Use eval to check if the constructed variable name exists and is not empty
+    eval "if [ -n \"\${$var_name}\" ]; then"
+        # Use eval again to set TMPDIR to the directory name of the constructed variable
+        eval "TMPDIR=\"$(dirname \"\${$var_name}\")\""
+        found_runningInstance=1
+        return
+    eval "fi"
+}
+
+set_tmpdir_from_env() {
+    # Construct the variable name by appending _bindir to $rEXENAME
+    var_name="${rEXE_NAME}_bindir"
+
+    # Use eval to check if the constructed variable name exists and is not empty
+    eval "var_value=\"\${$var_name}\""
+    if [ -n "$var_value" ]; then
+        # Correctly set TMPDIR to the directory containing the variable's value
+        TMPDIR="$(dirname "$var_value")"
+        found_runningInstance=1
+        return
+    fi
 }
 
 # Function to check if a library is found in system paths
@@ -186,20 +220,28 @@ mv_u() {
 
 # Add extra binaries to the PATH, if they are there.
 if [ "$(ls -1 "$TMPDIR"/bin | wc -l)" -gt 1 ]; then
-   export "$(echo "$EXE_NAME" | sed 's/-//g')_bindir"="$TMPDIR/bin"
-   export "$(echo "$EXE_NAME" | sed 's/-//g')_libs"="$TMPDIR/libs"
-   xPATH="$TMPDIR/bin:$PATH"
-   USE_BULKLIBS=0
+        if [ -z "$found_runningInstance" ] || [ "$found_runningInstance" != "1" ]; then
+                        export "$(echo "$rEXE_NAME" | sed -E 's/[-.]([a-zA-Z])/\U\1/g; s/[-.]//g')_bindir"="$TMPDIR/bin"
+                        export "$(echo "$rEXE_NAME" | sed -E 's/[-.]([a-zA-Z])/\U\1/g; s/[-.]//g')_libs"="$TMPDIR/libs"
+        fi
+        xPATH="$TMPDIR/bin:$PATH"
+        USE_BULKLIBS=0
 fi
 
+# Figure out what we do
+binDest="$TMPDIR/bin/$EXE_NAME"
+if [ "$1" = "--link" ] || [ "$1" = "-lex" ]; then
+    binDest="$2"
+    shift 2
+fi
 # Execute the binary with extracted libraries using LD_LIBRARY_PATH
 if [ "${USE_BULKLIBS:-0}" -eq 1 ]; then
    mkdir -p "$LIBS_BULKDIR"
    mv_u "$TMPDIR/libs" "$LIBS_BULKDIR"
-   PATH="xPATH:$PATH" LD_LIBRARY_PATH="$LIBS_BULKDIR" PREFIX="$TMPDIR" "$TMPDIR/bin/$EXE_NAME" "$@" || exit 1
+   PATH="xPATH:$PATH" LD_LIBRARY_PATH="$LIBS_BULKDIR" PREFIX="$TMPDIR" "$binDest" "$@" || exit 1
    EXE_NAME_PID="$!"
 else
-   PATH="$xPATH:$PATH" LD_LIBRARY_PATH="$TMPDIR/libs" PREFIX="$TMPDIR" "$TMPDIR/bin/$EXE_NAME" "$@" || exit 1
+   PATH="$xPATH:$PATH" LD_LIBRARY_PATH="$TMPDIR/libs" PREFIX="$TMPDIR" "$binDest" "$@" || exit 1
    EXE_NAME_PID="$!"
 fi
 
