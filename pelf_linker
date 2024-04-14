@@ -2,9 +2,9 @@
 
 # Function to concatenate all *_bindir environment variables into PELF_BINDIRS
 
-vval="string"
-PELF_BINDIRS="string"
-PELF_LIBDIRS="string"
+vval=""
+PELF_BINDIRS=""
+PELF_LIBDIRS=""
 
 concatenate_bindirs() {
     # Target any variable ending with _bindir
@@ -52,7 +52,8 @@ concatenate_bindirs "$1"
 concatenate_libdirs "$1"
 
 if [ "$1" = "--export" ]; then
-    export PELF_LIBDIRS PELF_BINDIRS
+    export PELF_LIBDIRS="$PELF_LIBDIRS"
+    export PELF_BINDIRS="$PELF_BINDIRS"
 else
     LD_LIBRARY_PATH="$PELF_LIBDIRS" PATH="$PATH:$PELF_BINDIRS" "$@"
 fi
