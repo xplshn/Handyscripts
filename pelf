@@ -233,10 +233,20 @@ fi
 
 # Figure out what we do
 binDest="$TMPDIR/bin/$EXE_NAME"
+if [ "$1" = "--pbundle_help" ]; then
+    printf "Description: Pack an ELF\n"
+    printf "Usage:\n <--pbundle_link <binary>|--pbundle_help> <args...>\n"
+    printf "EnvVars:\n USE_BULKLIBS=[0,1]\n USE_SYSTEM_LIBRARIES=[1,0]\n SHOW_DISCARDPROCESS=[0,1]\n HELP_PAGE_LIST_PACKEDFILES=[0,1]"
+    if [ "$HELP_PAGE_LIST_PACKEDFILES" = "1" ]; then
+        ls "$TMPDIR/*"
+    fi
+    exit 1
+fi
 if [ "$1" = "--pbundle_link" ]; then
     binDest="$2"
     shift 2
 fi
+
 # Execute the binary with extracted libraries using LD_LIBRARY_PATH
 if [ "${USE_BULKLIBS:-0}" -eq 1 ]; then
    mkdir -p "$LIBS_BULKDIR"
