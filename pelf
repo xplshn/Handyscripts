@@ -19,9 +19,10 @@ if [ "$#" -lt 2 ]; then
 fi
 
 # Create a temporary directory for bundling the files
-tmp_dir="/tmp/pelf_$(date '+%s%M%S')_$RANDOM"
+outer_tmp_dir="/tmp/pelf_$(date '+%s%M%S')_$RANDOM"
+tmp_dir="$outer_tmp_dir/pelf_$(date '+%s%M%S')_$RANDOM"
 mkdir -p "$tmp_dir/bin" "$tmp_dir/libs" || exit 1
-trap 'rm -rf "$tmp_dir"' EXIT
+trap 'rm -rf "$outer_tmp_dir"' EXIT
 
 src="$1"
 dst="$2"
@@ -83,7 +84,7 @@ done
 cp -L "$src" "$tmp_dir/bin" || exit 1
 
 # Create a tar archive of the executable, libraries and additional files.
-if ! tar czf "$tmp_dir/archive.tar.gz" -C "$tmp_dir" .; then
+if ! tar -C "$tmp_dir" -czf "$outer_tmp_dir/archive.tar.gz" .; then
     echo "Extraction failed" >&2
     exit 1
 fi
@@ -149,7 +150,7 @@ if [ -z "$found_runningInstance" ] || [ "$found_runningInstance" != "1" ]; then
             # Construct the variable name by appending _bindir to $rEXENAME
         var_name="${rEXE_NAME}_bindir"
         # Decode the base64-encoded archive and extract it
-        mkdir -p "$TMPDIR" && tail -n +$ARCHIVE_MARKER "$0" | base64 -d | tar xz -C "$TMPDIR" || {
+        mkdir -p "$TMPDIR" && tail -n +$ARCHIVE_MARKER "$0" | base64 -d | tar -xzf - -C "$TMPDIR" >/dev/null 2>&1 || {
             # Use eval to check if the constructed variable name exists and is not empty
             echo "Extraction failed" >&2
             eval "var_value=\"\${$var_name}\""
@@ -249,7 +250,7 @@ __ARCHIVE_MARKER__
 SCRIPT
 
 # Append the base64-encoded archive to the self-extracting script
-base64 "$tmp_dir/archive.tar.gz" >> "$dst" || exit 1
+cat "$outer_tmp_dir/archive.tar.gz" | base64 >> "$dst" || exit 1
 
 # Make the self-extracting script executable
 chmod +x "$dst" || exit 1
