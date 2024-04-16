@@ -63,7 +63,10 @@
 > saving config in /tmp/.local/share/chocolate-doom/default.cfg
 > Game mode indeterminate.  No IWAD file was found.  Try
 > specifying one with the '-iwad' command line parameter.
-> # as you can see, it works. But it should be used with care, and not everything will work, it is a janky thing to do anyways, best bet is to recompile your things as static binaries
+> # as you can see, it works. Most programs can be packed this way, even graphical ones ; Some others may require you to create wrappers, to add extra binaries or libraries which do not appear in ldd's output.
+> # I've also managed to pack my window manager along with a few X utils into a single file (programs packed alongside each other can be accessed from the main program's PATH)
+> # An example you can try to see the capabilities of PELF is to pack the xfce4-terminal into a single binary, ofc PELF won't track python dependencies, or schemas or other misc files a program may need, but you can still use the --add-arbitrary functionality and create a wrapper for the main binary, then add the real binary with --add-binary.
+> # You can also create "development boxes", a binary which when executed launches a shell with a custom PATH and LD_LIBRARY_PRELOAD, the dev box can contain Golang, Make, Zig C as a portable C compiler, Rust's Cargo, etc, all by creating a wrappper that modifies some env variables (e,g for Go; GOROOT="$(dirname "$devbox_bindir")/go") and using --add-arbitrary to add the necessary folders which contain the language's files
 > ```
 - [**xpointerkeys**<img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/bash/bash-original.svg" width="30" height="30">](https://github.com/xplshn/Handyscripts/blob/main/xpointerkeys) **➼** Enables X's pointerkeys feature "setxkbmap -option "keypad:pointerkeys".
 ---
