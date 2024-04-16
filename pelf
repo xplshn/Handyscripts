@@ -9,12 +9,12 @@ Redistribution and use in source and binary forms, with or without modification,
 1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.\n
 2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.\n
 3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.\n
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.\n
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS \“AS IS\” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.\n
 "
 
 # Check if the required arguments are provided
 if [ "$#" -lt 2 ]; then
-    echo "Usage: $0 <ELF_SRC_PATH> <DST_PATH.blob> [--add-library <LIB_PATH>] [--add-binary <BIN_PATH>]" >&2
+    echo "Usage: $0 <ELF_SRC_PATH> <DST_PATH.blob> [--add-library <LIB_PATH>] [--add-binary <BIN_PATH>] [--add-arbitrary <DIR,FILE>]" >&2
     exit 1
 fi
 
@@ -29,20 +29,23 @@ dst="$2"
 
 # Function to figure out what libraries the binaries need/depend on.
 add_thelibs() {
-# Copy the libraries from the executable to the temporary directory
-libs=$(ldd "$1" | awk '/=>/ { print $3 }')
-for lib in $libs; do
-    cp -L "$lib" "$tmp_dir/libs" || exit 1
-done
+ # Copy the libraries from the executable to the temporary directory
+ ldd "$1" | awk '
+     # Store the first word of the first line
+     NR == 1 { first_word = $1 }
+     # For lines with =>, check if the third word is not the same as the first word of the first line
+     /=>/ && $3 != first_word { print $3 }
+ ' | while read -r lib; do
+     # Copy the library to the temporary directory
+     cp -L "$lib" "$tmp_dir/libs" || exit 1
+ done
 }
-
-# Add the libraries of the 1st binary to the soon-to-be bundle.
-add_thelibs "$1"
 
 # Function to handle adding libraries
 add_library() {
     lib="$1"
     cp -L "$lib" "$tmp_dir/libs" || exit 1
+    add_thelibs "$lib" || exit 1
 }
 
 # Function to handle adding binaries
@@ -81,7 +84,7 @@ while [ "$#" -gt 0 ]; do
 done
 
 # Copy the executable to the temporary directory
-cp -L "$src" "$tmp_dir/bin" || exit 1
+add_binary "$src" || exit 1
 
 # Create a tar archive of the executable, libraries and additional files.
 if ! tar -C "$tmp_dir" -czf "$outer_tmp_dir/archive.tar.gz" .; then
