@@ -15,7 +15,7 @@ contains_number() {
 
 # Function to display an image using viu
 display_image() {
-    local image_path="$1"
+    image_path="$1"
     viu "$image_path"
 }
 
