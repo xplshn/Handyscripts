@@ -50,7 +50,7 @@
 > /usr/bin/cargo
 > ```
 - [**pelf**<img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/bash/bash-original.svg" width="30" height="30">](https://github.com/xplshn/Handyscripts/blob/main/pelf) **➼** PELF or rather, portable elf is a utility that creates a bundle of a dynamic binary, it takes a binary and budles its dependencies into a single, executable file.
-> - It needs tar, base64, tail and other commands. It is POSIX2008 compatible. It has proven to work on Alpine and .blobs generated across other systems work too (There might be some exceptions due to ABI differences.) of the same libc, one may use patchelf to change the interpreter prior to packing the binary. The compression can be changed by modifying the script, keep in mind that using base64 will expand the size of data by 37.6%, one can also use [`ascii85`](https://github.com/xplshn/m_ascii85) which only expands size by 13%.
+> - It needs tar and base64. It is POSIX2008 compatible. It has proven to work on Alpine and .blobs generated across other systems work too (There might be some exceptions due to ABI differences.) of the same libc, one may use patchelf to change the interpreter prior to packing the binary. The compression can be changed by modifying the script, keep in mind that using base64 will expand the size of data by 37.6%, one can also use [`ascii85`](https://github.com/xplshn/m_ascii85) which only expands size by 13%.
 > ```sh
 > $ pelf $(which chocolate-doom) ./chocolate-doom.blob # The name can not be set arbitrarily.
 > $ ./chocolate-doom.blob
