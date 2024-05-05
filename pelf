@@ -241,10 +241,10 @@ fi
 if [ "${USE_BULKLIBS:-0}" -eq 1 ]; then
    mkdir -p "$LIBS_BULKDIR"
    mv_u "$TMPDIR/libs" "$LIBS_BULKDIR"
-   PATH="xPATH:$PATH" LD_LIBRARY_PATH="$LIBS_BULKDIR" "$binDest" "$@" || exit 1
+   PATH="$PATH:$xPATH" LD_LIBRARY_PATH="$LIBS_BULKDIR" "$binDest" "$@" || exit 1
    EXE_NAME_PID="$!"
 else
-   PATH="$xPATH:$PATH" LD_LIBRARY_PATH="$TMPDIR/libs" "$binDest" "$@" || exit 1
+   PATH="$PATH:$xPATH" LD_LIBRARY_PATH="$TMPDIR/libs" "$binDest" "$@" || exit 1
    EXE_NAME_PID="$!"
 fi
 
