@@ -253,7 +253,7 @@ __ARCHIVE_MARKER__
 SCRIPT
 
 # Append the base64-encoded archive to the self-extracting script
-cat "$outer_tmp_dir/archive.tar.gz" | base64 >> "$dst" || exit 1
+base64 <"$outer_tmp_dir/archive.tar.gz" >> "$dst" || exit 1
 
 # Make the self-extracting script executable
 chmod +x "$dst" || exit 1
