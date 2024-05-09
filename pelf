@@ -3,6 +3,9 @@
 # shellcheck disable=SC2034
 # shellcheck disable=SC3028
 
+# PELF. Pack an ELF.
+# PELF receives a binary as its first argument and an output as its second argument. It will pack all the necessary libraries that it needs to run, except the libC and LD. PELFs may include optional files inside, be it a library, binary, folder or file.
+
 LICENSE="BSD-3-Clause License\n
 Copyright <2024> <xplshn@murena.io>\n
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:\n
