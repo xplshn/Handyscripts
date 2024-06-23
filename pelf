@@ -17,7 +17,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS \â€œAS IS\â€
 
 # Check if the required arguments are provided
 if [ "$#" -lt 2 ]; then
-    echo "Usage: $0 <ELF_SRC_PATH> <DST_PATH.blob> [--add-library <LIB_PATH>] [--add-binary <BIN_PATH>] [--add-arbitrary <DIR,FILE>]" >&2
+    echo "Usage: $0 [ELF_SRC_PATH] [DST_PATH.blob] <--add-library [LIB_PATH]> <--add-binary [BIN_PATH]> <--add-metadata [icon128x128.xpm|icon128x128.png|app.desktop]>  <--add-arbitrary [DIR|FILE]>" >&2
     exit 1
 fi
 
@@ -62,6 +62,19 @@ add_arbitrary() {
     cp -LR "$1" "$tmp_dir" || { echo "Failed to copy arbitrary files"; exit 1; }
 }
 
+add_metadata() {
+    case "$1" in
+            *.png | *.xpm | *.desktop)
+                mkdir -p "$tmp_dir"/bundledMetadata || { echo "Failed to create directory"; exit 1; }
+                cp -LR -- "$1" "$tmp_dir"/bundledMetadata/icon128x128."${1##*.}" || { echo "Failed to copy file"; exit 1; }
+                ;;
+            *)
+                echo "File extension not supported. Must be .png, .xpm or .desktop. If you supply an icon, size must be 128x128"
+                exit 1
+                ;;
+        esac
+}
+
 shift 2 # To access --(add)itional arguments
 
 # Process the optional arguments --add-library, --add-binary, and --add-arbitrary
@@ -75,10 +88,15 @@ while [ "$#" -gt 0 ]; do
             add_binary "$2"
             shift 2
             ;;
+        --add-metadata)
+            add_metadata "$2"
+            shift 2
+            ;;
         --add-arbitrary)
             add_arbitrary "$2"
             shift 2
             ;;
+
         *)
             echo "Invalid argument: $1" >&2
             exit 1
@@ -226,19 +244,48 @@ fi
 
 # Figure out what we do
 binDest="$TMPDIR/bin/$EXE_NAME"
-if [ "$1" = "--pbundle_help" ]; then
-    printf "Description: Pack an ELF\n"
-    printf "Usage:\n <--pbundle_link <binary>|--pbundle_help> <args...>\n"
-    printf "EnvVars:\n USE_BULKLIBS=[0,1]\n USE_SYSTEM_LIBRARIES=[1,0]\n SHOW_DISCARDPROCESS=[0,1]\n HELP_PAGE_LIST_PACKEDFILES=[0,1]\n"
-    if [ "$HELP_PAGE_LIST_PACKEDFILES" = "1" ]; then
-        ls "$TMPDIR"/*
-    fi
-    exit 1
-fi
-if [ "$1" = "--pbundle_link" ]; then
-    binDest="$2"
-    shift 2
-fi
+case "$1" in
+    --pbundle_help)
+        printf "Description: Pack an ELF\n"
+        printf "Usage:\n <--pbundle_link <binary>|--pbundle_help|--pbundle_xpmIcon|--pbundle_pngIcon|--pbundle_desktop> <args...>\n"
+        printf "EnvVars:\n USE_BULKLIBS=[0,1]\n USE_SYSTEM_LIBRARIES=[1,0]\n SHOW_DISCARDPROCESS=[0,1]\n HELP_PAGE_LIST_PACKEDFILES=[0,1]\n"
+        if [ "$HELP_PAGE_LIST_PACKEDFILES" = "1" ]; then
+            ls "$TMPDIR"/*
+        fi
+        exit 1
+        ;;
+    --pbundle_link)
+        binDest="$2"
+        shift 2
+        ;;
+    --pbundle_xpmIcon)
+        icon_path="$TMPDIR/bundledMetadata/icon128x128.xpm"
+        if [ -f "$icon_path" ]; then
+            base64 "$icon_path"
+            exit 0
+        else
+            exit 1
+        fi
+        ;;
+    --pbundle_pngIcon)
+        icon_path="$TMPDIR/bundledMetadata/icon128x128.png"
+        if [ -f "$icon_path" ]; then
+            base64 "$icon_path"
+            exit 0
+        else
+            exit 1
+        fi
+        ;;
+    --pbundle_desktop)
+            desktop_path="$TMPDIR/bundledMetadata/app.desktop"
+            if [ -f "$desktop_path" ]; then
+                base64 "$desktop_path"
+                exit 0
+            else
+                exit 1
+            fi
+            ;;
+esac
 
 # Execute the binary with extracted libraries using LD_LIBRARY_PATH
 if [ "${USE_BULKLIBS:-0}" -eq 1 ]; then
